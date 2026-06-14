@@ -1,0 +1,276 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Memora AI API",
+    "version": "1.0.0",
+    "description": "Memora AI REST API. Web clients use httpOnly refresh cookies; mobile/React Native clients send `X-Client-Platform: mobile` and receive refresh tokens in the JSON body."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:4000/api/v1",
+      "description": "Local development"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "parameters": {
+      "XClientPlatform": {
+        "name": "X-Client-Platform",
+        "in": "header",
+        "description": "Set to `mobile` for React Native / mobile token-in-body auth (alias: `X-Client-Type`)",
+        "schema": {
+          "type": "string",
+          "enum": ["mobile"]
+        }
+      }
+    },
+    "schemas": {
+      "SafeUser": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "name": { "type": "string" },
+          "avatar": { "type": "string" },
+          "provider": { "type": "string", "enum": ["local", "google", "github"] },
+          "subscription": { "type": "string", "enum": ["free", "pro", "enterprise"] },
+          "role": { "type": "string", "enum": ["user", "admin"] },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "WebAuthData": {
+        "type": "object",
+        "properties": {
+          "accessToken": { "type": "string" },
+          "user": { "$ref": "#/components/schemas/SafeUser" }
+        }
+      },
+      "MobileAuthData": {
+        "type": "object",
+        "properties": {
+          "accessToken": { "type": "string" },
+          "refreshToken": { "type": "string" },
+          "user": { "$ref": "#/components/schemas/SafeUser" }
+        }
+      },
+      "ApiSuccess": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "message": { "type": "string" },
+          "data": { "type": "object" }
+        }
+      },
+      "RegisterBody": {
+        "type": "object",
+        "required": ["email", "password", "name"],
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "password": { "type": "string", "minLength": 8 },
+          "name": { "type": "string" }
+        }
+      },
+      "LoginBody": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "password": { "type": "string" }
+        }
+      },
+      "RefreshBody": {
+        "type": "object",
+        "required": ["refreshToken"],
+        "properties": {
+          "refreshToken": { "type": "string" }
+        }
+      },
+      "LogoutBody": {
+        "type": "object",
+        "properties": {
+          "refreshToken": { "type": "string" }
+        }
+      },
+      "GoogleAuthBody": {
+        "type": "object",
+        "required": ["idToken"],
+        "properties": {
+          "idToken": {
+            "type": "string",
+            "description": "Google Sign-In ID token from the client SDK"
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Register a new user",
+        "parameters": [{ "$ref": "#/components/parameters/XClientPlatform" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RegisterBody" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Web: accessToken + user in body, refresh in httpOnly cookie. Mobile: accessToken + refreshToken + user in body.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiSuccess" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Login with email and password",
+        "parameters": [{ "$ref": "#/components/parameters/XClientPlatform" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginBody" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Web: accessToken + user in body, refresh in httpOnly cookie. Mobile: accessToken + refreshToken + user in body.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiSuccess" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/google": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Sign in with Google ID token",
+        "description": "Verifies a Google Sign-In ID token, extracts the Google subject (`sub`) claim, and binds it to the user record as `googleSub` (internal only — not returned in API responses). Creates a new user or logs in an existing account by email. On first Google login for a local account, `googleSub` is set to link the Google identity. If an existing user already has a different `googleSub`, the request is rejected. Always returns refreshToken in the JSON body; web clients (no mobile header) also receive an httpOnly refresh cookie.",
+        "parameters": [{ "$ref": "#/components/parameters/XClientPlatform" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/GoogleAuthBody" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Existing user logged in. Body includes accessToken, refreshToken, and user. Web clients also get refresh httpOnly cookie.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiSuccess" }
+              }
+            }
+          },
+          "201": {
+            "description": "New Google user created. Body includes accessToken, refreshToken, and user.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiSuccess" }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid, expired, or unverified Google ID token"
+          },
+          "403": {
+            "description": "Google account does not match existing user (googleSub mismatch)"
+          },
+          "503": {
+            "description": "Google authentication not configured (GOOGLE_CLIENT_ID missing)"
+          }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Rotate access and refresh tokens",
+        "description": "Web: send refresh token via httpOnly cookie (no body). Mobile: send `X-Client-Platform: mobile` or `{ refreshToken }` in body.",
+        "parameters": [{ "$ref": "#/components/parameters/XClientPlatform" }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RefreshBody" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "New tokens issued; old refresh token revoked.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiSuccess" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Logout and revoke refresh token",
+        "description": "Web: revokes refresh cookie. Mobile: optional `refreshToken` in body and/or Bearer access token.",
+        "parameters": [{ "$ref": "#/components/parameters/XClientPlatform" }],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LogoutBody" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Logged out successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiSuccess" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "Get current user profile",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Current user profile",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiSuccess" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

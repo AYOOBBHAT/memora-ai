@@ -1,0 +1,93 @@
+# Dependencies (reinstalled on EAS builders)
+node_modules/
+
+# Git and IDE
+.git/
+.gitignore
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Expo caches and generated web output
+.expo/
+.expo-shared/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native folders (regenerated via prebuild on EAS)
+android/
+ios/
+
+# Native build artifacts (if android/ios present locally)
+android/app/build/
+android/build/
+android/.gradle/
+ios/build/
+ios/Pods/
+ios/DerivedData/
+
+# Test and coverage output
+coverage/
+**/__tests__/__snapshots__/
+
+# Build output
+build/
+*.tsbuildinfo
+
+# Logs
+*.log
+logs/
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# Caches and temp files
+**/.cache/
+**/.gradle/
+**/cache/
+**/tmp/
+**/*.tmp
+.metro-health-check*
+
+# Archives and binaries (should never be uploaded)
+*.apk
+*.aab
+*.ipa
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+*.rar
+
+# Large media and documents
+*.pdf
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+*.wmv
+
+# Secrets and local env
+.env
+.env*.local
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.pem
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Monorepo siblings (safety if git root is above mobile/)
+../backend/
+../docs/
+../.github/
+../*.md
+!../README.md
