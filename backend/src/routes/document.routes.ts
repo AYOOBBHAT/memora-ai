@@ -3,24 +3,46 @@ import {
   getDocuments,
   getDocument,
   createDocumentHandler,
+  uploadPdfHandler,
+  importUrlHandler,
   updateDocumentHandler,
   retryDocumentEmbeddingHandler,
   deleteDocumentHandler,
   searchDocumentsHandler,
 } from '@/controllers/document.controller';
 import { authenticate } from '@/middleware/auth.middleware';
-import { validate, validateParams } from '@/middleware/validate.middleware';
+import { handleUploadError, uploadPdfMiddleware } from '@/middleware/upload.middleware';
+import { validate, validateParams, validateUploadFields } from '@/middleware/validate.middleware';
 import {
   createDocumentSchema,
   updateDocumentSchema,
   documentIdParamSchema,
   searchDocumentsSchema,
+  uploadPdfFieldsSchema,
+  importUrlSchema,
 } from '@/validators/document.validator';
 
 const router = Router();
 
 router.get('/', authenticate, getDocuments);
 router.post('/', authenticate, validate(createDocumentSchema), createDocumentHandler);
+router.post(
+  '/upload-pdf',
+  authenticate,
+  (req, res, next) => {
+    uploadPdfMiddleware(req, res, (err) => {
+      if (err) {
+        handleUploadError(err, req, res, next);
+        return;
+      }
+
+      next();
+    });
+  },
+  validateUploadFields(uploadPdfFieldsSchema),
+  uploadPdfHandler,
+);
+router.post('/import-url', authenticate, validate(importUrlSchema), importUrlHandler);
 router.post('/search', authenticate, validate(searchDocumentsSchema), searchDocumentsHandler);
 router.get(
   '/:id',

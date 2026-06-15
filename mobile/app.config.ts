@@ -58,7 +58,20 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 
   },
 
-  plugins: ['expo-web-browser'],
+  plugins: [
+    'expo-web-browser',
+    ['expo-build-properties', { android: { usesCleartextTraffic: true } }],
+    [
+      'expo-share-intent',
+      {
+        disableIOS: true,
+        androidIntentFilters: ['text/plain', 'text/*'],
+        androidMainActivityAttributes: {
+          'android:launchMode': 'singleTask',
+        },
+      },
+    ],
+  ],
 
   extra: {
     eas: {

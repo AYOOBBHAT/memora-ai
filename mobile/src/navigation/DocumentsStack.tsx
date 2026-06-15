@@ -4,6 +4,7 @@ import { CreateDocumentScreen } from '../features/documents/screens/CreateDocume
 import { DocumentDetailScreen } from '../features/documents/screens/DocumentDetailScreen';
 import { DocumentsListScreen } from '../features/documents/screens/DocumentsListScreen';
 import { EditDocumentScreen } from '../features/documents/screens/EditDocumentScreen';
+import { SearchScreen } from '../features/search/screens/SearchScreen';
 import { useTheme } from '../theme/ThemeProvider';
 
 import type { DocumentsStackParamList } from './types';
@@ -27,6 +28,11 @@ export function DocumentsStack() {
         name="DocumentsList"
         component={DocumentsListScreen}
         options={{ title: 'Documents' }}
+      />
+      <Stack.Screen
+        name="Search"
+        component={SearchScreen}
+        options={{ title: 'Search', headerShown: false }}
       />
       <Stack.Screen
         name="DocumentDetail"

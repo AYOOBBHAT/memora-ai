@@ -16,6 +16,8 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { DocumentListItem } from '../components/DocumentListItem';
 import { ErrorBanner } from '../components/ErrorBanner';
+import { PdfUploadButton } from '../../documents/components/PdfUploadButton';
+import { UrlImportButton } from '../../documents/components/UrlImportButton';
 import { DEFAULT_COLLECTION_COLOR, DEFAULT_COLLECTION_ICON } from '../constants';
 import { useDeleteCollection } from '../../../hooks/mutations/useDeleteCollection';
 import { useCollection } from '../../../hooks/queries/useCollection';
@@ -74,6 +76,16 @@ export function CollectionDetailScreen({ navigation, route }: Props) {
       params: { collectionId },
     });
   }, [collectionId, navigation]);
+
+  const handlePdfUploadSuccess = useCallback(
+    (documentId: string) => {
+      navigation.navigate('Home', {
+        screen: 'DocumentDetail',
+        params: { documentId },
+      });
+    },
+    [navigation],
+  );
 
   const handleEdit = useCallback(() => {
     navigation.navigate('EditCollection', { collectionId });
@@ -241,6 +253,20 @@ export function CollectionDetailScreen({ navigation, route }: Props) {
           Documents
         </Text>
 
+        <PdfUploadButton
+          collectionId={collectionId}
+          label="Upload PDF to collection"
+          variant="secondary"
+          onSuccess={(document) => handlePdfUploadSuccess(document.id)}
+        />
+
+        <UrlImportButton
+          collectionId={collectionId}
+          label="Import URL to collection"
+          variant="secondary"
+          onSuccess={(document) => handlePdfUploadSuccess(document.id)}
+        />
+
         {isDocumentsLoading ? (
           <ActivityIndicator color={theme.colors.primary} style={styles.documentsLoader} />
         ) : isDocumentsError ? (
@@ -285,6 +311,18 @@ export function CollectionDetailScreen({ navigation, route }: Props) {
                 Add document
               </Text>
             </Pressable>
+            <PdfUploadButton
+              collectionId={collectionId}
+              label="Upload PDF"
+              variant="secondary"
+              onSuccess={(document) => handlePdfUploadSuccess(document.id)}
+            />
+            <UrlImportButton
+              collectionId={collectionId}
+              label="Import URL"
+              variant="secondary"
+              onSuccess={(document) => handlePdfUploadSuccess(document.id)}
+            />
           </View>
         ) : (
           <View style={styles.documentsList}>

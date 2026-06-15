@@ -8,13 +8,29 @@ export type AuthStackParamList = {
 
 export type DocumentsStackParamList = {
   DocumentsList: undefined;
+  Search: undefined;
   DocumentDetail: { documentId: string };
   CreateDocument: { collectionId?: string } | undefined;
   EditDocument: { documentId: string };
 };
 
 export type ChatStackParamList = {
-  ChatMain: undefined;
+  ChatMain:
+    | {
+        conversationId?: string;
+        initialMessage?: string;
+        autoSend?: boolean;
+      }
+    | undefined;
+  ChatHistory: undefined;
+};
+
+export type OnboardingStackParamList = {
+  Intro: undefined;
+  Category: undefined;
+  FirstNote: { categoryId: string };
+  FirstQuestion: { categoryId: string };
+  Success: { openChat?: boolean } | undefined;
 };
 
 export type MainTabParamList = {
@@ -32,8 +48,8 @@ export type CollectionsStackParamList = {
 };
 
 export type RootStackParamList = {
-  Auth: NavigatorScreenParams<AuthStackParamList>;
-  Main: NavigatorScreenParams<MainTabParamList>;
+  App: NavigatorScreenParams<MainTabParamList> | undefined;
+  ShareHandler: undefined;
 };
 
 declare global {

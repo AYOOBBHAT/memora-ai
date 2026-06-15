@@ -1,5 +1,8 @@
 import { useEffect, type ReactNode } from 'react';
 import { NavigationContainer, DarkTheme, DefaultTheme } from '@react-navigation/native';
+
+import { linking } from '../navigation/linking';
+import { navigationRef } from '../navigation/navigationRef';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -26,7 +29,11 @@ function NavigationShell({ children }: { children: ReactNode }) {
 
   return (
     <SafeAreaProvider>
-      <NavigationContainer theme={isDark ? DarkTheme : DefaultTheme}>
+      <NavigationContainer
+        ref={navigationRef}
+        linking={linking}
+        theme={isDark ? DarkTheme : DefaultTheme}
+      >
         <StatusBar style={isDark ? 'light' : 'dark'} />
         {children}
       </NavigationContainer>

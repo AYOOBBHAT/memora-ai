@@ -18,6 +18,21 @@ export const validate =
     next();
   };
 
+export const validateUploadFields =
+  (schema: ZodSchema) =>
+  (req: Request, _res: Response, next: NextFunction): void => {
+    const result = schema.safeParse(req.body);
+
+    if (!result.success) {
+      const errors = result.error.flatten().fieldErrors;
+      next(new ApiError(HTTP_STATUS.BAD_REQUEST, 'Validation failed', errors));
+      return;
+    }
+
+    req.body = result.data;
+    next();
+  };
+
 export const validateParams =
   (schema: ZodSchema) =>
   (req: Request, _res: Response, next: NextFunction): void => {
@@ -30,5 +45,20 @@ export const validateParams =
     }
 
     req.params = result.data as Request['params'];
+    next();
+  };
+
+export const validateQuery =
+  (schema: ZodSchema) =>
+  (req: Request, _res: Response, next: NextFunction): void => {
+    const result = schema.safeParse(req.query);
+
+    if (!result.success) {
+      const errors = result.error.flatten().fieldErrors;
+      next(new ApiError(HTTP_STATUS.BAD_REQUEST, 'Validation failed', errors));
+      return;
+    }
+
+    req.query = result.data as Request['query'];
     next();
   };

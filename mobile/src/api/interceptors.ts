@@ -64,8 +64,32 @@ async function refreshAccessToken(): Promise<string | null> {
   return refreshPromise;
 }
 
+// TEMP DEBUG — remove after signup network issue is resolved
+function logAxiosError(error: AxiosError): void {
+  console.log('[API_DEBUG] axios error:', {
+    message: error.message,
+    code: error.code,
+    status: error.response?.status,
+    data: error.response?.data,
+    url: error.config?.url,
+    baseURL: error.config?.baseURL,
+  });
+}
+
 export function setupInterceptors(): void {
   apiClient.interceptors.request.use((config) => {
+    // TEMP DEBUG — remove after signup network issue is resolved
+    console.log(
+      '[API_DEBUG] request:',
+      (config.method ?? 'GET').toUpperCase(),
+      '| baseURL:',
+      config.baseURL,
+      '| url:',
+      config.url,
+      '| full:',
+      axios.getUri(config),
+    );
+
     config.headers[CLIENT_PLATFORM_HEADER] = CLIENT_PLATFORM_VALUE;
 
     const { accessToken } = useAuthStore.getState();
@@ -79,6 +103,9 @@ export function setupInterceptors(): void {
   apiClient.interceptors.response.use(
     (response) => response,
     async (error: AxiosError) => {
+      // TEMP DEBUG — remove after signup network issue is resolved
+      logAxiosError(error);
+
       const originalRequest = error.config as RetryableRequestConfig | undefined;
 
       if (

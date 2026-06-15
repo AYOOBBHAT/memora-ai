@@ -18,12 +18,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { ChatCitationSource } from '../../../api/types';
 import { ChatInput } from '../components/ChatInput';
 import { ChatMessageBubble } from '../components/ChatMessageBubble';
+import { ErrorBanner } from '../../collections/components/ErrorBanner';
 import { useSendChat } from '../../../hooks/mutations/useSendChat';
+import { useConversation } from '../../../hooks/queries/useConversation';
 import { useCollections } from '../../../hooks/queries/useCollections';
+import { findQuickNotesCollectionId } from '../../onboarding/utils/quickNotes';
 import { getApiErrorMessage } from '../../../lib/apiError';
+import { isNetworkError } from '../../../lib/network';
 import type { ChatStackParamList } from '../../../navigation/types';
 import {
   createChatMessageId,
+  historyMessageToChatMessage,
   useChatStore,
   type ChatMessage,
 } from '../../../stores/chat.store';
@@ -31,18 +36,42 @@ import { useTheme } from '../../../theme/ThemeProvider';
 
 type Props = NativeStackScreenProps<ChatStackParamList, 'ChatMain'>;
 
-export function ChatScreen({ navigation }: Props) {
+export function ChatScreen({ navigation, route }: Props) {
   const { theme } = useTheme();
   const flatListRef = useRef<FlatList<ChatMessage>>(null);
   const [input, setInput] = useState('');
   const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>([]);
+  const [offlineBanner, setOfflineBanner] = useState(false);
 
+  const conversationId = useChatStore((state) => state.conversationId);
+  const conversationTitle = useChatStore((state) => state.conversationTitle);
   const messages = useChatStore((state) => state.messages);
   const addMessage = useChatStore((state) => state.addMessage);
-  const clearMessages = useChatStore((state) => state.clearMessages);
+  const startNewChat = useChatStore((state) => state.startNewChat);
+  const setActiveConversation = useChatStore((state) => state.setActiveConversation);
+  const setConversationMeta = useChatStore((state) => state.setConversationMeta);
+
+  const resumeConversationId = route.params?.conversationId;
+  const { data: conversationDetail, isLoading: isLoadingConversation } =
+    useConversation(resumeConversationId ?? null);
 
   const { data: collections = [] } = useCollections();
   const sendChat = useSendChat();
+
+  useEffect(() => {
+    if (!resumeConversationId || !conversationDetail) {
+      return;
+    }
+
+    setActiveConversation({
+      conversationId: conversationDetail.conversation.id,
+      title: conversationDetail.conversation.title,
+      collectionIds: conversationDetail.conversation.collectionIds ?? [],
+      messages: conversationDetail.messages.map(historyMessageToChatMessage),
+    });
+    setSelectedCollectionIds(conversationDetail.conversation.collectionIds ?? []);
+    navigation.setParams({ conversationId: undefined });
+  }, [conversationDetail, navigation, resumeConversationId, setActiveConversation]);
 
   const scrollToBottom = useCallback(() => {
     if (messages.length === 0) {
@@ -57,33 +86,64 @@ export function ChatScreen({ navigation }: Props) {
     scrollToBottom();
   }, [messages, sendChat.isPending, scrollToBottom]);
 
-  const handleClearConversation = useCallback(() => {
-    Alert.alert('Clear conversation', 'Remove all messages from this chat?', [
+  const handleStartNewChat = useCallback(() => {
+    Alert.alert('Start new chat', 'Clear the current conversation and begin a new one?', [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Clear',
+        text: 'New chat',
         style: 'destructive',
-        onPress: () => clearMessages(),
+        onPress: () => {
+          startNewChat();
+          setSelectedCollectionIds([]);
+          setOfflineBanner(false);
+        },
       },
     ]);
-  }, [clearMessages]);
+  }, [startNewChat]);
+
+  const handleOpenHistory = useCallback(() => {
+    navigation.navigate('ChatHistory');
+  }, [navigation]);
 
   useLayoutEffect(() => {
+    const headerTitle = conversationTitle?.trim() || 'New chat';
+
     navigation.setOptions({
+      title: headerTitle,
+      headerLeft: () => (
+        <Pressable
+          accessibilityLabel="Open chat history"
+          accessibilityRole="button"
+          hitSlop={8}
+          onPress={handleOpenHistory}
+          style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1, paddingHorizontal: 4 }]}
+        >
+          <Ionicons color={theme.colors.text} name="time-outline" size={22} />
+        </Pressable>
+      ),
       headerRight: () =>
-        messages.length > 0 ? (
+        messages.length > 0 || conversationId ? (
           <Pressable
-            accessibilityLabel="Clear conversation"
+            accessibilityLabel="Start new chat"
             accessibilityRole="button"
             hitSlop={8}
-            onPress={handleClearConversation}
+            onPress={handleStartNewChat}
             style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1, paddingHorizontal: 4 }]}
           >
-            <Ionicons color={theme.colors.textSecondary} name="trash-outline" size={22} />
+            <Ionicons color={theme.colors.textSecondary} name="create-outline" size={22} />
           </Pressable>
         ) : null,
     });
-  }, [handleClearConversation, messages.length, navigation, theme.colors.textSecondary]);
+  }, [
+    conversationId,
+    conversationTitle,
+    handleOpenHistory,
+    handleStartNewChat,
+    messages.length,
+    navigation,
+    theme.colors.text,
+    theme.colors.textSecondary,
+  ]);
 
   const handleSourcePress = useCallback(
     (source: ChatCitationSource) => {
@@ -104,51 +164,108 @@ export function ChatScreen({ navigation }: Props) {
     );
   }, []);
 
+  const sendMessage = useCallback(
+    (message: string, collectionIdsOverride?: string[]) => {
+      const trimmed = message.trim();
+      if (!trimmed || sendChat.isPending) {
+        return;
+      }
+
+      const userMessage: ChatMessage = {
+        id: createChatMessageId(),
+        role: 'user',
+        content: trimmed,
+        createdAt: new Date().toISOString(),
+      };
+
+      addMessage(userMessage);
+      setInput('');
+      setOfflineBanner(false);
+
+      const collectionIds =
+        collectionIdsOverride ??
+        (selectedCollectionIds.length > 0 ? selectedCollectionIds : undefined);
+
+      sendChat.mutate(
+        {
+          message: trimmed,
+          collectionIds,
+          conversationId: conversationId ?? undefined,
+        },
+        {
+          onSuccess: (response) => {
+            if (!conversationId && response.conversationId) {
+              setConversationMeta({
+                conversationId: response.conversationId,
+                title: trimmed,
+              });
+            }
+
+            addMessage({
+              id: response.messageId ?? createChatMessageId(),
+              role: 'assistant',
+              content: response.answer,
+              sources: response.sources,
+              createdAt: new Date().toISOString(),
+            });
+          },
+          onError: (error) => {
+            if (isNetworkError(error)) {
+              setOfflineBanner(true);
+            }
+
+            addMessage({
+              id: createChatMessageId(),
+              role: 'assistant',
+              content: getApiErrorMessage(
+                error,
+                'Something went wrong while generating an answer. Please try again.',
+              ),
+              createdAt: new Date().toISOString(),
+              error: true,
+            });
+          },
+        },
+      );
+    },
+    [addMessage, conversationId, selectedCollectionIds, sendChat, setConversationMeta],
+  );
+
   const handleSend = useCallback(() => {
-    const trimmed = input.trim();
-    if (!trimmed || sendChat.isPending) {
+    sendMessage(input);
+  }, [input, sendMessage]);
+
+  const autoSendHandled = useRef(false);
+
+  useEffect(() => {
+    const trimmed = route.params?.initialMessage?.trim();
+    const shouldAutoSend = route.params?.autoSend;
+
+    if (!trimmed) {
       return;
     }
 
-    const userMessage: ChatMessage = {
-      id: createChatMessageId(),
-      role: 'user',
-      content: trimmed,
-      createdAt: new Date().toISOString(),
-    };
+    if (shouldAutoSend && !autoSendHandled.current) {
+      autoSendHandled.current = true;
+      navigation.setParams({ initialMessage: undefined, autoSend: undefined });
 
-    addMessage(userMessage);
-    setInput('');
+      void (async () => {
+        const quickNotesId = await findQuickNotesCollectionId();
+        if (quickNotesId) {
+          setSelectedCollectionIds([quickNotesId]);
+          sendMessage(trimmed, [quickNotesId]);
+          return;
+        }
+        sendMessage(trimmed);
+      })();
+      return;
+    }
 
-    const collectionIds = selectedCollectionIds.length > 0 ? selectedCollectionIds : undefined;
-
-    sendChat.mutate(
-      { message: trimmed, collectionIds },
-      {
-        onSuccess: (response) => {
-          addMessage({
-            id: createChatMessageId(),
-            role: 'assistant',
-            content: response.answer,
-            sources: response.sources,
-            createdAt: new Date().toISOString(),
-          });
-        },
-        onError: (error) => {
-          addMessage({
-            id: createChatMessageId(),
-            role: 'assistant',
-            content: getApiErrorMessage(
-              error,
-              'Something went wrong while generating an answer. Please try again.',
-            ),
-            createdAt: new Date().toISOString(),
-            error: true,
-          });
-        },
-      },
-    );
-  }, [addMessage, input, selectedCollectionIds, sendChat]);
+    if (!shouldAutoSend) {
+      setInput(trimmed);
+      navigation.setParams({ initialMessage: undefined });
+    }
+  }, [navigation, route.params?.autoSend, route.params?.initialMessage, sendMessage]);
 
   const renderMessage = useCallback(
     ({ item }: { item: ChatMessage }) => (
@@ -240,11 +357,24 @@ export function ChatScreen({ navigation }: Props) {
       </View>
     ) : null;
 
+  if (resumeConversationId && isLoadingConversation && messages.length === 0) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background }]}>
+        <ActivityIndicator color={theme.colors.primary} size="large" />
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView
       edges={['bottom']}
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
+      {offlineBanner ? (
+        <View style={styles.offlineBanner}>
+          <ErrorBanner message="You're offline. Messages can't be sent until you're back online." />
+        </View>
+      ) : null}
       {collectionFilter}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -292,7 +422,7 @@ export function ChatScreen({ navigation }: Props) {
           renderItem={renderMessage}
         />
         <ChatInput
-          disabled={sendChat.isPending}
+          disabled={sendChat.isPending || offlineBanner}
           onChangeText={setInput}
           onSend={handleSend}
           value={input}
@@ -306,8 +436,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  loadingContainer: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+  },
   flex: {
     flex: 1,
+  },
+  offlineBanner: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
   },
   listContent: {
     flexGrow: 1,

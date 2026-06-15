@@ -1,5 +1,6 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
+import { ChatHistoryScreen } from '../features/chat/screens/ChatHistoryScreen';
 import { ChatScreen } from '../features/chat/screens/ChatScreen';
 import { useTheme } from '../theme/ThemeProvider';
 
@@ -20,6 +21,11 @@ export function ChatStack() {
       }}
     >
       <Stack.Screen name="ChatMain" component={ChatScreen} options={{ title: 'Chat' }} />
+      <Stack.Screen
+        name="ChatHistory"
+        component={ChatHistoryScreen}
+        options={{ title: 'Chat history' }}
+      />
     </Stack.Navigator>
   );
 }

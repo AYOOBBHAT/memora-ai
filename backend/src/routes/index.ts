@@ -4,6 +4,7 @@ import authRoutes from '@/routes/auth.routes';
 import documentRoutes from '@/routes/document.routes';
 import collectionRoutes from '@/routes/collection.routes';
 import chatRoutes from '@/routes/chat.routes';
+import searchRoutes from '@/routes/search.routes';
 import systemRoutes from '@/routes/system.routes';
 
 const router = Router();
@@ -14,5 +15,6 @@ router.use('/auth', authRoutes);
 router.use('/documents', documentRoutes);
 router.use('/collections', collectionRoutes);
 router.use('/chat', chatRoutes);
+router.use('/search', searchRoutes);
 
 export default router;

@@ -20,9 +20,41 @@ export interface IDocumentMetadata {
   fileName?: string;
   mimeType?: string;
   fileSize?: number;
+  pageCount?: number;
+  uploadedAt?: string;
+  fetchedAt?: string;
+  extractedTitle?: string;
   youtubeVideoId?: string;
   originalUrl?: string;
   storageKey?: string;
+}
+
+export type PdfExtractionStatus = 'success' | 'failed';
+
+export interface PdfExtractionInfo {
+  status: PdfExtractionStatus;
+  pageCount?: number;
+  fileName: string;
+  error?: string;
+}
+
+export interface PdfUploadResponse {
+  document: SafeDocument;
+  extraction: PdfExtractionInfo;
+}
+
+export type UrlExtractionStatus = 'success' | 'failed';
+
+export interface UrlExtractionInfo {
+  status: UrlExtractionStatus;
+  originalUrl: string;
+  title?: string;
+  error?: string;
+}
+
+export interface UrlImportResponse {
+  document: SafeDocument;
+  extraction: UrlExtractionInfo;
 }
 
 export interface JwtPayload {
@@ -110,6 +142,68 @@ export interface ChatCitationSource {
 export interface ChatResponse {
   answer: string;
   sources: ChatCitationSource[];
+  conversationId?: string;
+  messageId?: string;
+}
+
+export interface SafeConversation {
+  id: string;
+  userId: string;
+  title?: string;
+  collectionIds?: string[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface SafeChatMessage {
+  id: string;
+  conversationId: string;
+  userId: string;
+  role: 'user' | 'assistant';
+  content: string;
+  citations?: ChatCitationSource[];
+  timestamp: Date;
+}
+
+export interface ConversationListItem {
+  id: string;
+  title?: string;
+  preview: string;
+  messageCount: number;
+  updatedAt: Date;
+}
+
+export interface ConversationDetail {
+  conversation: SafeConversation;
+  messages: SafeChatMessage[];
+}
+
+export type DocumentSearchMatchField = 'title' | 'content';
+export type CollectionSearchMatchField = 'name' | 'description';
+
+export interface DocumentSearchResult {
+  type: 'document';
+  id: string;
+  title: string;
+  snippet: string;
+  sourceType: DocumentSourceType;
+  collectionId?: string;
+  matchField: DocumentSearchMatchField;
+}
+
+export interface CollectionSearchResult {
+  type: 'collection';
+  id: string;
+  name: string;
+  snippet: string;
+  matchField: CollectionSearchMatchField;
+}
+
+export type GlobalSearchResult = DocumentSearchResult | CollectionSearchResult;
+
+export interface GlobalSearchResponse {
+  results: GlobalSearchResult[];
+  query: string;
 }
 
 export interface ChatHealthResult {
@@ -122,6 +216,8 @@ export interface ChatHealthResult {
 export type {
   CreateDocumentInput,
   UpdateDocumentInput,
+  UploadPdfInput,
+  ImportUrlInput,
   DocumentIdParams,
   SearchDocumentsInput,
 } from '@/validators/document.validator';
@@ -134,4 +230,5 @@ export type {
   AddDocumentsToCollectionInput,
 } from '@/validators/collection.validator';
 
-export type { ChatMessageInput } from '@/validators/chat.validator';
+export type { ChatMessageInput, ConversationIdParams, ConversationSearchQuery } from '@/validators/chat.validator';
+export type { GlobalSearchQuery } from '@/validators/search.validator';

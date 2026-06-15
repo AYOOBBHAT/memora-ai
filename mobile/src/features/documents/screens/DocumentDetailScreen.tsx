@@ -3,6 +3,7 @@ import { useCallback, useLayoutEffect } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -54,6 +55,19 @@ export function DocumentDetailScreen({ navigation, route }: Props) {
   const handleRetryEmbedding = useCallback(() => {
     retryEmbedding.mutate();
   }, [retryEmbedding]);
+
+  const originalUrl =
+    document?.sourceType === 'url' && typeof document.metadata?.originalUrl === 'string'
+      ? document.metadata.originalUrl
+      : null;
+
+  const handleOpenOriginalUrl = useCallback(() => {
+    if (!originalUrl) {
+      return;
+    }
+
+    void Linking.openURL(originalUrl);
+  }, [originalUrl]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -195,6 +209,28 @@ export function DocumentDetailScreen({ navigation, route }: Props) {
         {document.title}
       </Text>
 
+      {originalUrl ? (
+        <Pressable
+          accessibilityRole="link"
+          onPress={handleOpenOriginalUrl}
+          style={({ pressed }) => [styles.sourceLink, { opacity: pressed ? 0.7 : 1 }]}
+        >
+          <Ionicons color={theme.colors.primary} name="open-outline" size={16} />
+          <Text
+            numberOfLines={2}
+            style={[
+              styles.sourceLinkText,
+              {
+                color: theme.colors.primary,
+                fontSize: theme.typography.fontSizes.sm,
+              },
+            ]}
+          >
+            {originalUrl}
+          </Text>
+        </Pressable>
+      ) : null}
+
       <View
         style={[
           styles.contentCard,
@@ -264,6 +300,15 @@ const styles = StyleSheet.create({
   },
   retryText: {},
   title: {},
+  sourceLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  sourceLinkText: {
+    flex: 1,
+    textDecorationLine: 'underline',
+  },
   contentCard: {
     borderRadius: 12,
     borderWidth: 1,

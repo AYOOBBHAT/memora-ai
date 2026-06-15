@@ -51,6 +51,10 @@ Google sign-in uses `expo-auth-session` (works in Expo Go). For native Google Si
 | `npm run ios` | Start on iOS |
 | `npm run typecheck` | Run TypeScript check |
 
+## Android share extension
+
+Share text/URLs from other apps into Memora. Requires a **development or EAS build** (not Expo Go). See [docs/ANDROID_SHARE.md](./docs/ANDROID_SHARE.md).
+
 ## Testing auth
 
 1. Start the backend (`cd backend && npm run dev`).

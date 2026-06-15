@@ -284,21 +284,154 @@ Existing local accounts with the same email are logged in without a password on 
 |--------|------|------|-------------|
 | GET | `/documents` | Bearer access token | List user's documents |
 | POST | `/documents` | Bearer access token | Create a document |
+| POST | `/documents/upload-pdf` | Bearer access token | Upload a text-based PDF (multipart, max 10MB) |
+| POST | `/documents/import-url` | Bearer access token | Import article text from a public http(s) URL |
 | POST | `/documents/search` | Bearer access token | Semantic vector search over user's documents |
 | GET | `/documents/:id` | Bearer access token | Get a document by ID |
 | PUT | `/documents/:id` | Bearer access token | Update a document |
 | POST | `/documents/:id/retry-embedding` | Bearer access token | Retry embedding for a failed or pending document |
 | DELETE | `/documents/:id` | Bearer access token | Delete a document |
 
+#### Example: Upload text-based PDF
+
+`multipart/form-data` with field `file` (PDF, max 10MB). Optional fields: `title`, `collectionId`. Text extraction only — no OCR; encrypted or image-only PDFs return 422.
+
+```bash
+curl -X POST http://localhost:4000/api/v1/documents/upload-pdf \
+  -H "Authorization: Bearer <access_token>" \
+  -F "file=@/path/to/notes.pdf" \
+  -F "title=Study Notes" \
+  -F "collectionId=507f1f77bcf86cd799439011"
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "PDF uploaded and document created successfully",
+  "data": {
+    "document": {
+      "id": "674a1b2c3d4e5f6789012345",
+      "title": "Study Notes",
+      "sourceType": "pdf",
+      "embeddingStatus": "pending",
+      "metadata": {
+        "fileName": "notes.pdf",
+        "mimeType": "application/pdf",
+        "fileSize": 12345,
+        "pageCount": 4,
+        "uploadedAt": "2026-06-14T12:00:00.000Z"
+      }
+    },
+    "extraction": {
+      "status": "success",
+      "pageCount": 4,
+      "fileName": "notes.pdf"
+    }
+  }
+}
+```
+
+#### Example: Import URL
+
+Fetches a public HTML page, extracts readable article text with Mozilla Readability (no auth/cookies), and creates a document with `sourceType: "url"`. Private/localhost URLs are blocked (SSRF protection). Optional fields: `title`, `collectionId`.
+
+```bash
+curl -X POST http://localhost:4000/api/v1/documents/import-url \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://example.com/article","title":"Optional title","collectionId":"507f1f77bcf86cd799439011"}'
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "URL imported and document created successfully",
+  "data": {
+    "document": {
+      "id": "674a1b2c3d4e5f6789012345",
+      "title": "Example Article",
+      "sourceType": "url",
+      "embeddingStatus": "pending",
+      "metadata": {
+        "originalUrl": "https://example.com/article",
+        "fetchedAt": "2026-06-14T12:00:00.000Z",
+        "extractedTitle": "Example Article"
+      }
+    },
+    "extraction": {
+      "status": "success",
+      "originalUrl": "https://example.com/article",
+      "title": "Example Article"
+    }
+  }
+}
+```
+
+On failure (unreachable URL, non-HTML, empty extraction, SSRF blocked), the API returns **422** with a clear message and an `extraction` object when applicable.
+
+### Global Search (keyword)
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/search?q=...&limit=20` | Bearer access token | Keyword search across the user's documents and collections |
+
+Case-insensitive regex match on document **title** and **content**, and collection **name** and **description**. Minimum query length is 2 characters. Returns up to 10 results per type (max 20 total). This is **not** semantic/vector search — use `POST /documents/search` for embedding-based retrieval.
+
+#### Example: global keyword search
+
+```bash
+curl "http://localhost:4000/api/v1/search?q=notes&limit=20" \
+  -H "Authorization: Bearer <access_token>"
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "Search completed successfully",
+  "data": {
+    "query": "notes",
+    "results": [
+      {
+        "type": "document",
+        "id": "674a1b2c3d4e5f6789012345",
+        "title": "Meeting notes",
+        "snippet": "…discuss project roadmap and action items…",
+        "sourceType": "text",
+        "matchField": "title"
+      },
+      {
+        "type": "collection",
+        "id": "507f1f77bcf86cd799439011",
+        "name": "Work notes",
+        "snippet": "Important work items and references",
+        "matchField": "name"
+      }
+    ]
+  }
+}
+```
+
 ### Chat (RAG)
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| POST | `/chat` | Bearer access token | RAG chat — answer questions from your embedded documents |
+| POST | `/chat` | Bearer access token | RAG chat — answer questions from your embedded documents (persists conversation turns) |
+| GET | `/chat/conversations` | Bearer access token | List the user's saved chat conversations |
+| GET | `/chat/conversations/search?q=` | Bearer access token | Keyword search in conversation titles and message content (min 2 chars) |
+| GET | `/chat/conversations/:id` | Bearer access token | Get a conversation with full message history |
+| DELETE | `/chat/conversations/:id` | Bearer access token | Delete a conversation and its messages |
 
 Requires `GOOGLE_AI_API_KEY` (embeddings/search), `GROQ_API_KEY` (answer generation), and a configured Atlas Vector Search index. Only documents with `embeddingStatus: "completed"` are used as context.
 
 Optionally pass `collectionIds` to limit retrieval to documents in specific owned collections. Omit `collectionIds` (or pass an empty array) to search all embedded documents.
+
+Pass optional `conversationId` on `POST /chat` to continue an existing conversation. When omitted, a new conversation is created and both the user question and assistant answer are saved with citations and timestamps.
 
 #### Example: RAG chat
 
@@ -307,6 +440,43 @@ curl -X POST http://localhost:4000/api/v1/chat \
   -H "Authorization: Bearer <access_token>" \
   -H "Content-Type: application/json" \
   -d '{"message": "What are the main topics in my notes?"}'
+```
+
+#### Example: continue an existing conversation
+
+```bash
+curl -X POST http://localhost:4000/api/v1/chat \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Tell me more", "conversationId": "674a1b2c3d4e5f6789012345"}'
+```
+
+#### Example: list conversations
+
+```bash
+curl http://localhost:4000/api/v1/chat/conversations \
+  -H "Authorization: Bearer <access_token>"
+```
+
+#### Example: search conversations
+
+```bash
+curl "http://localhost:4000/api/v1/chat/conversations/search?q=notes" \
+  -H "Authorization: Bearer <access_token>"
+```
+
+#### Example: get conversation detail
+
+```bash
+curl http://localhost:4000/api/v1/chat/conversations/674a1b2c3d4e5f6789012345 \
+  -H "Authorization: Bearer <access_token>"
+```
+
+#### Example: delete conversation
+
+```bash
+curl -X DELETE http://localhost:4000/api/v1/chat/conversations/674a1b2c3d4e5f6789012345 \
+  -H "Authorization: Bearer <access_token>"
 ```
 
 #### Example: RAG chat scoped to collections
@@ -333,10 +503,14 @@ Response:
         "sourceType": "text",
         "score": 0.92
       }
-    ]
+    ],
+    "conversationId": "674a1b2c3d4e5f6789012346",
+    "messageId": "674a1b2c3d4e5f6789012347"
   }
 }
 ```
+
+List/search conversation responses include `title`, `preview`, `messageCount`, and `updatedAt`. Conversation detail responses include `conversation` metadata and a `messages` array with `role`, `content`, `citations`, and `timestamp` per turn.
 
 Each entry in `sources` is a document that was retrieved and passed into the Gemini context for that answer. The `score` field is the MongoDB Atlas Vector Search similarity score (`vectorSearchScore`) for the user's query — higher values indicate stronger semantic relevance. When no matching documents are found, `sources` is an empty array and `answer` explains that no relevant documents were available.
 

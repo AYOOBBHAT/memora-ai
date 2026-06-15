@@ -16,6 +16,8 @@ import {
   DocumentFormFields,
   type DocumentFormValues,
 } from '../components/DocumentFormFields';
+import { PdfUploadButton } from '../components/PdfUploadButton';
+import { UrlImportButton } from '../components/UrlImportButton';
 import { useCreateDocument } from '../../../hooks/mutations/useCreateDocument';
 import { getApiErrorMessage } from '../../../lib/apiError';
 import type { DocumentsStackParamList } from '../../../navigation/types';
@@ -33,6 +35,10 @@ export function CreateDocumentScreen({ navigation, route }: Props) {
   const [titleError, setTitleError] = useState<string | null>(null);
   const [contentError, setContentError] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
+
+  const isPdfMode = values.sourceType === 'pdf';
+  const isUrlMode = values.sourceType === 'url';
+  const isAlternateSourceMode = isPdfMode || isUrlMode;
 
   const handleSubmit = () => {
     setApiError(null);
@@ -85,39 +91,62 @@ export function CreateDocumentScreen({ navigation, route }: Props) {
           onChange={setValues}
           titleError={titleError}
           contentError={contentError}
+          showContentField={!isAlternateSourceMode}
         />
+
+        {isPdfMode ? (
+          <PdfUploadButton
+            collectionId={values.collectionId}
+            title={values.title}
+            onSuccess={(document) => {
+              navigation.replace('DocumentDetail', { documentId: document.id });
+            }}
+          />
+        ) : null}
+
+        {isUrlMode ? (
+          <UrlImportButton
+            collectionId={values.collectionId}
+            title={values.title}
+            onSuccess={(document) => {
+              navigation.replace('DocumentDetail', { documentId: document.id });
+            }}
+          />
+        ) : null}
 
         {apiError ? <ErrorBanner message={apiError} /> : null}
 
-        <Pressable
-          accessibilityRole="button"
-          disabled={createDocument.isPending}
-          onPress={handleSubmit}
-          style={({ pressed }) => [
-            styles.submitButton,
-            {
-              backgroundColor: theme.colors.primary,
-              opacity: pressed || createDocument.isPending ? 0.85 : 1,
-            },
-          ]}
-        >
-          {createDocument.isPending ? (
-            <ActivityIndicator color={theme.colors.primaryText} />
-          ) : (
-            <Text
-              style={[
-                styles.submitText,
-                {
-                  color: theme.colors.primaryText,
-                  fontSize: theme.typography.fontSizes.md,
-                  fontWeight: theme.typography.fontWeights.semibold,
-                },
-              ]}
-            >
-              Create document
-            </Text>
-          )}
-        </Pressable>
+        {!isAlternateSourceMode ? (
+          <Pressable
+            accessibilityRole="button"
+            disabled={createDocument.isPending}
+            onPress={handleSubmit}
+            style={({ pressed }) => [
+              styles.submitButton,
+              {
+                backgroundColor: theme.colors.primary,
+                opacity: pressed || createDocument.isPending ? 0.85 : 1,
+              },
+            ]}
+          >
+            {createDocument.isPending ? (
+              <ActivityIndicator color={theme.colors.primaryText} />
+            ) : (
+              <Text
+                style={[
+                  styles.submitText,
+                  {
+                    color: theme.colors.primaryText,
+                    fontSize: theme.typography.fontSizes.md,
+                    fontWeight: theme.typography.fontWeights.semibold,
+                  },
+                ]}
+              >
+                Create document
+              </Text>
+            )}
+          </Pressable>
+        ) : null}
       </ScrollView>
     </KeyboardAvoidingView>
   );

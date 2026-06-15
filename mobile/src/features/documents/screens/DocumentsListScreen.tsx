@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback } from 'react';
+import { useCallback, useLayoutEffect } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -13,6 +13,8 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { DocumentListItem } from '../../collections/components/DocumentListItem';
 import { ErrorBanner } from '../../collections/components/ErrorBanner';
+import { PdfUploadButton } from '../components/PdfUploadButton';
+import { UrlImportButton } from '../components/UrlImportButton';
 import { useDocuments } from '../../../hooks/queries/useDocuments';
 import { getApiErrorMessage } from '../../../lib/apiError';
 import type { DocumentsStackParamList } from '../../../navigation/types';
@@ -28,7 +30,33 @@ export function DocumentsListScreen({ navigation }: Props) {
     navigation.navigate('CreateDocument');
   }, [navigation]);
 
+  const handleSearchPress = useCallback(() => {
+    navigation.navigate('Search');
+  }, [navigation]);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Search documents and collections"
+          onPress={handleSearchPress}
+          style={({ pressed }) => [styles.headerButton, { opacity: pressed ? 0.7 : 1 }]}
+        >
+          <Ionicons name="search" size={24} color={theme.colors.primary} />
+        </Pressable>
+      ),
+    });
+  }, [navigation, handleSearchPress, theme.colors.primary]);
+
   const handleDocumentPress = useCallback(
+    (documentId: string) => {
+      navigation.navigate('DocumentDetail', { documentId });
+    },
+    [navigation],
+  );
+
+  const handlePdfUploadSuccess = useCallback(
     (documentId: string) => {
       navigation.navigate('DocumentDetail', { documentId });
     },
@@ -80,7 +108,7 @@ export function DocumentsListScreen({ navigation }: Props) {
               },
             ]}
           >
-            Add text documents to build your knowledge base.
+            Add text documents, import URLs, or upload PDFs to build your knowledge base.
           </Text>
           <Pressable
             accessibilityRole="button"
@@ -106,6 +134,16 @@ export function DocumentsListScreen({ navigation }: Props) {
               Create document
             </Text>
           </Pressable>
+          <PdfUploadButton
+            label="Upload PDF"
+            variant="secondary"
+            onSuccess={(document) => handlePdfUploadSuccess(document.id)}
+          />
+          <UrlImportButton
+            label="Import URL"
+            variant="secondary"
+            onSuccess={(document) => handlePdfUploadSuccess(document.id)}
+          />
         </View>
         <Pressable
           accessibilityRole="button"
@@ -127,6 +165,18 @@ export function DocumentsListScreen({ navigation }: Props) {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <View style={styles.uploadBar}>
+        <PdfUploadButton
+          label="Upload PDF"
+          variant="secondary"
+          onSuccess={(document) => handlePdfUploadSuccess(document.id)}
+        />
+        <UrlImportButton
+          label="Import URL"
+          variant="secondary"
+          onSuccess={(document) => handlePdfUploadSuccess(document.id)}
+        />
+      </View>
       <FlatList
         contentContainerStyle={styles.listContent}
         data={documents}
@@ -163,6 +213,14 @@ export function DocumentsListScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  headerButton: {
+    padding: 4,
+    marginRight: 4,
+  },
+  uploadBar: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
   },
   centered: {
     flex: 1,

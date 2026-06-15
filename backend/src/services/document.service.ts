@@ -1,11 +1,19 @@
 import { DocumentModel, IDocumentDocument } from '@/models/Document.model';
 import { HTTP_STATUS } from '@/constants/httpStatus';
-import { SafeDocument } from '@/types';
+import { PdfExtractionInfo, PdfUploadResponse, SafeDocument, UrlExtractionInfo, UrlImportResponse } from '@/types';
 import { ApiError } from '@/utils/ApiError';
 import { scheduleDocumentEmbedding } from '@/services/embedding.service';
+import { verifyUserCollections } from '@/services/collection.service';
+import { extractTextFromPdf, stripPdfExtension } from '@/services/pdf.service';
+import {
+  extractTextFromUrl,
+  hostnameFromUrl,
+} from '@/services/url.service';
 import {
   CreateDocumentInput,
+  ImportUrlInput,
   UpdateDocumentInput,
+  UploadPdfInput,
 } from '@/validators/document.validator';
 
 export function toSafeDocument(doc: IDocumentDocument): SafeDocument {
@@ -55,6 +63,110 @@ export async function createDocument(
   scheduleDocumentEmbedding(document._id.toString(), userId);
 
   return toSafeDocument(document);
+}
+
+export async function createDocumentFromPdf(
+  userId: string,
+  file: Express.Multer.File,
+  fields: UploadPdfInput,
+): Promise<PdfUploadResponse> {
+  const fileName = file.originalname || 'document.pdf';
+  const title = fields.title?.trim() || stripPdfExtension(fileName);
+
+  const extractionResult = await extractTextFromPdf(file.buffer);
+
+  const extraction: PdfExtractionInfo = {
+    status: extractionResult.status,
+    pageCount: extractionResult.pageCount,
+    fileName,
+    ...(extractionResult.error ? { error: extractionResult.error } : {}),
+  };
+
+  if (extractionResult.status === 'failed' || !extractionResult.text) {
+    throw new ApiError(
+      HTTP_STATUS.UNPROCESSABLE_ENTITY,
+      extractionResult.error ?? 'PDF text extraction failed',
+      { extraction },
+    );
+  }
+
+  if (fields.collectionId) {
+    await verifyUserCollections(userId, [fields.collectionId]);
+  }
+
+  const document = await DocumentModel.create({
+    userId,
+    title,
+    content: extractionResult.text,
+    sourceType: 'pdf',
+    metadata: {
+      fileName,
+      mimeType: file.mimetype,
+      fileSize: file.size,
+      pageCount: extractionResult.pageCount,
+      uploadedAt: new Date().toISOString(),
+    },
+    ...(fields.collectionId ? { collectionId: fields.collectionId } : {}),
+  });
+
+  scheduleDocumentEmbedding(document._id.toString(), userId);
+
+  return {
+    document: toSafeDocument(document),
+    extraction,
+  };
+}
+
+export async function createDocumentFromUrl(
+  userId: string,
+  input: ImportUrlInput,
+): Promise<UrlImportResponse> {
+  const originalUrl = input.url.trim();
+  const extractionResult = await extractTextFromUrl(originalUrl);
+
+  const extraction: UrlExtractionInfo = {
+    status: extractionResult.status,
+    originalUrl: extractionResult.originalUrl,
+    ...(extractionResult.title ? { title: extractionResult.title } : {}),
+    ...(extractionResult.error ? { error: extractionResult.error } : {}),
+  };
+
+  if (extractionResult.status === 'failed' || !extractionResult.text) {
+    throw new ApiError(
+      HTTP_STATUS.UNPROCESSABLE_ENTITY,
+      extractionResult.error ?? 'URL text extraction failed',
+      { extraction },
+    );
+  }
+
+  if (input.collectionId) {
+    await verifyUserCollections(userId, [input.collectionId]);
+  }
+
+  const title =
+    input.title?.trim() ||
+    extractionResult.title?.trim() ||
+    hostnameFromUrl(originalUrl);
+
+  const document = await DocumentModel.create({
+    userId,
+    title,
+    content: extractionResult.text,
+    sourceType: 'url',
+    metadata: {
+      originalUrl: extractionResult.originalUrl,
+      fetchedAt: new Date().toISOString(),
+      ...(extractionResult.title ? { extractedTitle: extractionResult.title } : {}),
+    },
+    ...(input.collectionId ? { collectionId: input.collectionId } : {}),
+  });
+
+  scheduleDocumentEmbedding(document._id.toString(), userId);
+
+  return {
+    document: toSafeDocument(document),
+    extraction,
+  };
 }
 
 export async function updateDocument(

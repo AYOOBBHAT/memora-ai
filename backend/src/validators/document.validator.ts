@@ -59,6 +59,44 @@ const objectIdSchema = z
   .string()
   .regex(/^[0-9a-fA-F]{24}$/, 'Invalid collection ID');
 
+export const uploadPdfFieldsSchema = z.object({
+  title: z
+    .string()
+    .max(500, 'Title cannot exceed 500 characters')
+    .trim()
+    .optional(),
+  collectionId: z
+    .string()
+    .regex(/^[0-9a-fA-F]{24}$/, 'Invalid collection ID')
+    .optional(),
+});
+
+const httpHttpsUrlSchema = z
+  .string()
+  .trim()
+  .url('Invalid URL')
+  .refine((value) => {
+    try {
+      const parsed = new URL(value);
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  }, 'Only http and https URLs are supported');
+
+export const importUrlSchema = z.object({
+  url: httpHttpsUrlSchema,
+  title: z
+    .string()
+    .max(500, 'Title cannot exceed 500 characters')
+    .trim()
+    .optional(),
+  collectionId: z
+    .string()
+    .regex(/^[0-9a-fA-F]{24}$/, 'Invalid collection ID')
+    .optional(),
+});
+
 export const searchDocumentsSchema = z.object({
   query: z.string().min(1, 'Query is required').trim(),
   limit: z.coerce.number().int().min(1).max(5).optional(),
@@ -70,5 +108,7 @@ export const searchDocumentsSchema = z.object({
 
 export type CreateDocumentInput = z.infer<typeof createDocumentSchema>;
 export type UpdateDocumentInput = z.infer<typeof updateDocumentSchema>;
+export type UploadPdfInput = z.infer<typeof uploadPdfFieldsSchema>;
+export type ImportUrlInput = z.infer<typeof importUrlSchema>;
 export type DocumentIdParams = z.infer<typeof documentIdParamSchema>;
 export type SearchDocumentsInput = z.infer<typeof searchDocumentsSchema>;
