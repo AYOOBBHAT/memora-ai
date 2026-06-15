@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { importUrlSchema, uploadPdfFieldsSchema } from '@/validators/document.validator';
+import { importUrlSchema, importYoutubeSchema, uploadPdfFieldsSchema } from '@/validators/document.validator';
 
 describe('uploadPdfFieldsSchema', () => {
   it('accepts an empty body', () => {
@@ -73,5 +73,31 @@ describe('importUrlSchema', () => {
     if (result.success) {
       expect(result.data.title).toBe('Custom title');
     }
+  });
+});
+
+describe('importYoutubeSchema', () => {
+  it('accepts a valid YouTube URL', () => {
+    const result = importYoutubeSchema.safeParse({
+      url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts youtu.be URLs', () => {
+    const result = importYoutubeSchema.safeParse({
+      url: 'https://youtu.be/dQw4w9WgXcQ',
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects non-YouTube URLs', () => {
+    const result = importYoutubeSchema.safeParse({
+      url: 'https://example.com/video',
+    });
+
+    expect(result.success).toBe(false);
   });
 });

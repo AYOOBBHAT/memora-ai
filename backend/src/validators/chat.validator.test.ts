@@ -12,6 +12,25 @@ describe('chatMessageSchema', () => {
     expect(result.success).toBe(true);
   });
 
+  it('accepts optional collectionId', () => {
+    const result = chatMessageSchema.safeParse({
+      message: 'Hello',
+      collectionId: '507f1f77bcf86cd799439011',
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects collectionId and collectionIds together', () => {
+    const result = chatMessageSchema.safeParse({
+      message: 'Hello',
+      collectionId: '507f1f77bcf86cd799439011',
+      collectionIds: ['507f1f77bcf86cd799439012'],
+    });
+
+    expect(result.success).toBe(false);
+  });
+
   it('rejects invalid conversationId values', () => {
     const result = chatMessageSchema.safeParse({
       message: 'Hello',

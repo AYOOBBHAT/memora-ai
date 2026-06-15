@@ -8,13 +8,16 @@ import type {
 
 export interface SendChatMessageInput {
   message: string;
+  collectionId?: string;
   collectionIds?: string[];
   conversationId?: string;
 }
 
 export async function sendChatMessage(input: SendChatMessageInput): Promise<ChatResponse> {
   const body: SendChatMessageInput = { message: input.message };
-  if (input.collectionIds?.length) {
+  if (input.collectionId) {
+    body.collectionId = input.collectionId;
+  } else if (input.collectionIds?.length) {
     body.collectionIds = input.collectionIds;
   }
   if (input.conversationId) {

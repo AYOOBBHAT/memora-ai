@@ -54,6 +54,23 @@ export interface ImportUrlResult {
   extraction: UrlExtractionInfo;
 }
 
+export type YouTubeExtractionStatus = 'success' | 'failed';
+
+export interface YouTubeExtractionInfo {
+  status: YouTubeExtractionStatus;
+  originalUrl: string;
+  videoId?: string;
+  title?: string;
+  channel?: string;
+  thumbnail?: string;
+  error?: string;
+}
+
+export interface ImportYoutubeResult {
+  document: SafeDocument;
+  extraction: YouTubeExtractionInfo;
+}
+
 export interface SafeDocument {
   id: string;
   userId: string;
@@ -65,8 +82,26 @@ export interface SafeDocument {
   embeddingStatus: DocumentEmbeddingStatus;
   embeddingError?: string;
   embeddingUpdatedAt?: string;
+  lastViewedAt?: string;
+  lastOpenedAt?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface RecentDocumentItem {
+  id: string;
+  title: string;
+  sourceType: DocumentSourceType;
+  collectionId?: string;
+  collectionName?: string;
+  updatedAt: string;
+  createdAt: string;
+  lastViewedAt?: string;
+}
+
+export interface RecentDocumentsResponse {
+  recentlyViewed: RecentDocumentItem[];
+  recentlyAdded: RecentDocumentItem[];
 }
 
 export interface SafeCollection {
@@ -87,11 +122,19 @@ export interface ChatCitationSource {
   score: number;
 }
 
+export interface ChatCollectionScope {
+  id: string;
+  name: string;
+  icon?: string;
+  color?: string;
+}
+
 export interface ChatResponse {
   answer: string;
   sources: ChatCitationSource[];
   conversationId?: string;
   messageId?: string;
+  scopedCollections?: ChatCollectionScope[];
 }
 
 export interface ConversationListItem {

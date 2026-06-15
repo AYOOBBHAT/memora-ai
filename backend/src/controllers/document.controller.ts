@@ -7,9 +7,11 @@ import type { DocumentIdParams, SearchDocumentsInput } from '@/types';
 import {
   listUserDocuments,
   getDocumentById,
+  getRecentDocuments,
   createDocument,
   createDocumentFromPdf,
   createDocumentFromUrl,
+  createDocumentFromYoutube,
   updateDocument,
   retryDocumentEmbedding,
   deleteDocument,
@@ -20,6 +22,12 @@ export const getDocuments = asyncHandler(async (req: Request, res: Response) => 
   const documents = await listUserDocuments(req.user!.id);
 
   ApiResponse.success(res, 'Documents retrieved successfully', { documents });
+});
+
+export const getRecentDocumentsHandler = asyncHandler(async (req: Request, res: Response) => {
+  const recent = await getRecentDocuments(req.user!.id);
+
+  ApiResponse.success(res, 'Recent documents retrieved successfully', recent);
 });
 
 export const getDocument = asyncHandler(async (req: Request, res: Response) => {
@@ -48,6 +56,12 @@ export const importUrlHandler = asyncHandler(async (req: Request, res: Response)
   const result = await createDocumentFromUrl(req.user!.id, req.body);
 
   ApiResponse.created(res, 'URL imported and document created successfully', result);
+});
+
+export const importYoutubeHandler = asyncHandler(async (req: Request, res: Response) => {
+  const result = await createDocumentFromYoutube(req.user!.id, req.body);
+
+  ApiResponse.created(res, 'YouTube transcript imported and document created successfully', result);
 });
 
 export const updateDocumentHandler = asyncHandler(async (req: Request, res: Response) => {

@@ -1,5 +1,13 @@
 import { apiClient } from '../client';
-import type { ApiResponse, DocumentSourceType, ImportUrlResult, SafeDocument, UploadPdfResult } from '../types';
+import type {
+  ApiResponse,
+  DocumentSourceType,
+  ImportUrlResult,
+  ImportYoutubeResult,
+  RecentDocumentsResponse,
+  SafeDocument,
+  UploadPdfResult,
+} from '../types';
 import { assignDocumentToCollection } from './collections.service';
 
 export interface CreateDocumentInput {
@@ -29,6 +37,11 @@ export async function getDocuments(): Promise<SafeDocument[]> {
   const { data } = await apiClient.get<ApiResponse<{ documents: SafeDocument[] }>>('/documents');
   const payload = unwrapData(data, 'Failed to load documents');
   return payload.documents;
+}
+
+export async function getRecentDocuments(): Promise<RecentDocumentsResponse> {
+  const { data } = await apiClient.get<ApiResponse<RecentDocumentsResponse>>('/documents/recent');
+  return unwrapData(data, 'Failed to load recent documents');
 }
 
 export async function getDocument(id: string): Promise<SafeDocument> {
@@ -147,4 +160,55 @@ export async function importUrl(input: ImportUrlInput): Promise<ImportUrlResult>
   });
 
   return unwrapData(data, 'Failed to import URL');
+}
+
+const YOUTUBE_URL_PATTERN =
+  /^https?:\/\/(www\.|m\.)?(youtube\.com\/(watch\?v=|embed\/|shorts\/|live\/)|youtu\.be\/)[\w-]{11}/i;
+
+export function isValidYouTubeUrl(value: string): boolean {
+  const trimmed = value.trim();
+  if (!HTTP_HTTPS_URL_PATTERN.test(trimmed)) {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    const host = parsed.hostname.toLowerCase();
+
+    if (host === 'youtu.be') {
+      return /^\/[\w-]{11}/.test(parsed.pathname);
+    }
+
+    if (host === 'youtube.com' || host === 'www.youtube.com' || host === 'm.youtube.com') {
+      if (parsed.pathname === '/watch') {
+        return /^[\w-]{11}$/.test(parsed.searchParams.get('v') ?? '');
+      }
+
+      const parts = parsed.pathname.split('/').filter(Boolean);
+      return (
+        (parts[0] === 'embed' || parts[0] === 'shorts' || parts[0] === 'live') &&
+        /^[\w-]{11}$/.test(parts[1] ?? '')
+      );
+    }
+  } catch {
+    return false;
+  }
+
+  return YOUTUBE_URL_PATTERN.test(trimmed);
+}
+
+export interface ImportYoutubeInput {
+  url: string;
+  title?: string;
+  collectionId?: string;
+}
+
+export async function importYoutube(input: ImportYoutubeInput): Promise<ImportYoutubeResult> {
+  const { data } = await apiClient.post<ApiResponse<ImportYoutubeResult>>('/documents/import-youtube', {
+    url: input.url.trim(),
+    ...(input.title?.trim() ? { title: input.title.trim() } : {}),
+    ...(input.collectionId ? { collectionId: input.collectionId } : {}),
+  });
+
+  return unwrapData(data, 'Failed to import YouTube transcript');
 }

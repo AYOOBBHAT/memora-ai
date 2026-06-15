@@ -28,6 +28,7 @@ export const queryKeys = {
   documents: {
     all: ['documents'] as const,
     list: () => [...queryKeys.documents.all, 'list'] as const,
+    recent: () => [...queryKeys.documents.all, 'recent'] as const,
     detail: (id: string) => [...queryKeys.documents.all, 'detail', id] as const,
   },
   chat: {

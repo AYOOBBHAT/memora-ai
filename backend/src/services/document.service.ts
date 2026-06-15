@@ -1,6 +1,7 @@
 import { DocumentModel, IDocumentDocument } from '@/models/Document.model';
+import { CollectionModel } from '@/models/Collection.model';
 import { HTTP_STATUS } from '@/constants/httpStatus';
-import { PdfExtractionInfo, PdfUploadResponse, SafeDocument, UrlExtractionInfo, UrlImportResponse } from '@/types';
+import { PdfExtractionInfo, PdfUploadResponse, RecentDocumentItem, RecentDocumentsResponse, SafeDocument, UrlExtractionInfo, UrlImportResponse, YouTubeExtractionInfo, YouTubeImportResponse } from '@/types';
 import { ApiError } from '@/utils/ApiError';
 import { scheduleDocumentEmbedding } from '@/services/embedding.service';
 import { verifyUserCollections } from '@/services/collection.service';
@@ -12,9 +13,11 @@ import {
 import {
   CreateDocumentInput,
   ImportUrlInput,
+  ImportYoutubeInput,
   UpdateDocumentInput,
   UploadPdfInput,
 } from '@/validators/document.validator';
+import { extractYouTubeTranscript } from '@/services/youtube.service';
 
 export function toSafeDocument(doc: IDocumentDocument): SafeDocument {
   return {
@@ -28,10 +31,57 @@ export function toSafeDocument(doc: IDocumentDocument): SafeDocument {
     embeddingStatus: doc.embeddingStatus ?? 'pending',
     embeddingError: doc.embeddingError,
     embeddingUpdatedAt: doc.embeddingUpdatedAt,
+    lastViewedAt: doc.lastViewedAt,
+    lastOpenedAt: doc.lastOpenedAt,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };
 }
+
+function toRecentDocumentItem(
+  doc: IDocumentDocument,
+  collectionName?: string,
+): RecentDocumentItem {
+  return {
+    id: doc._id.toString(),
+    title: doc.title,
+    sourceType: doc.sourceType,
+    collectionId: doc.collectionId?.toString(),
+    collectionName,
+    updatedAt: doc.updatedAt,
+    createdAt: doc.createdAt,
+    ...(doc.lastViewedAt ? { lastViewedAt: doc.lastViewedAt } : {}),
+  };
+}
+
+async function enrichWithCollectionNames(
+  userId: string,
+  documents: IDocumentDocument[],
+): Promise<RecentDocumentItem[]> {
+  const collectionIds = [
+    ...new Set(
+      documents
+        .map((doc) => doc.collectionId?.toString())
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+
+  const collections =
+    collectionIds.length > 0
+      ? await CollectionModel.find({ _id: { $in: collectionIds }, userId }).select('name')
+      : [];
+
+  const nameById = new Map(collections.map((c) => [c._id.toString(), c.name]));
+
+  return documents.map((doc) =>
+    toRecentDocumentItem(
+      doc,
+      doc.collectionId ? nameById.get(doc.collectionId.toString()) : undefined,
+    ),
+  );
+}
+
+const RECENT_DOCUMENTS_LIMIT = 10;
 
 export async function listUserDocuments(userId: string): Promise<SafeDocument[]> {
   const documents = await DocumentModel.find({ userId }).sort({ createdAt: -1 });
@@ -42,13 +92,36 @@ export async function getDocumentById(
   userId: string,
   documentId: string,
 ): Promise<SafeDocument> {
-  const document = await DocumentModel.findOne({ _id: documentId, userId });
+  const now = new Date();
+  const document = await DocumentModel.findOneAndUpdate(
+    { _id: documentId, userId },
+    { $set: { lastViewedAt: now, lastOpenedAt: now } },
+    { new: true },
+  );
 
   if (!document) {
     throw new ApiError(HTTP_STATUS.NOT_FOUND, 'Document not found');
   }
 
   return toSafeDocument(document);
+}
+
+export async function getRecentDocuments(userId: string): Promise<RecentDocumentsResponse> {
+  const [recentlyViewedDocs, recentlyAddedDocs] = await Promise.all([
+    DocumentModel.find({ userId, lastViewedAt: { $exists: true, $ne: null } })
+      .sort({ lastViewedAt: -1 })
+      .limit(RECENT_DOCUMENTS_LIMIT),
+    DocumentModel.find({ userId })
+      .sort({ createdAt: -1 })
+      .limit(RECENT_DOCUMENTS_LIMIT),
+  ]);
+
+  const [recentlyViewed, recentlyAdded] = await Promise.all([
+    enrichWithCollectionNames(userId, recentlyViewedDocs),
+    enrichWithCollectionNames(userId, recentlyAddedDocs),
+  ]);
+
+  return { recentlyViewed, recentlyAdded };
 }
 
 export async function createDocument(
@@ -157,6 +230,63 @@ export async function createDocumentFromUrl(
       originalUrl: extractionResult.originalUrl,
       fetchedAt: new Date().toISOString(),
       ...(extractionResult.title ? { extractedTitle: extractionResult.title } : {}),
+    },
+    ...(input.collectionId ? { collectionId: input.collectionId } : {}),
+  });
+
+  scheduleDocumentEmbedding(document._id.toString(), userId);
+
+  return {
+    document: toSafeDocument(document),
+    extraction,
+  };
+}
+
+export async function createDocumentFromYoutube(
+  userId: string,
+  input: ImportYoutubeInput,
+): Promise<YouTubeImportResponse> {
+  const originalUrl = input.url.trim();
+  const extractionResult = await extractYouTubeTranscript(originalUrl);
+
+  const extraction: YouTubeExtractionInfo = {
+    status: extractionResult.status,
+    originalUrl: extractionResult.metadata?.originalUrl ?? originalUrl,
+    ...(extractionResult.metadata?.videoId ? { videoId: extractionResult.metadata.videoId } : {}),
+    ...(extractionResult.metadata?.title ? { title: extractionResult.metadata.title } : {}),
+    ...(extractionResult.metadata?.channel ? { channel: extractionResult.metadata.channel } : {}),
+    ...(extractionResult.metadata?.thumbnail ? { thumbnail: extractionResult.metadata.thumbnail } : {}),
+    ...(extractionResult.error ? { error: extractionResult.error } : {}),
+  };
+
+  if (extractionResult.status === 'failed' || !extractionResult.text || !extractionResult.metadata) {
+    throw new ApiError(
+      HTTP_STATUS.UNPROCESSABLE_ENTITY,
+      extractionResult.error ?? 'YouTube transcript extraction failed',
+      { extraction },
+    );
+  }
+
+  if (input.collectionId) {
+    await verifyUserCollections(userId, [input.collectionId]);
+  }
+
+  const metadata = extractionResult.metadata;
+  const title = input.title?.trim() || metadata.title;
+
+  const document = await DocumentModel.create({
+    userId,
+    title,
+    content: extractionResult.text,
+    sourceType: 'youtube',
+    metadata: {
+      videoId: metadata.videoId,
+      youtubeVideoId: metadata.videoId,
+      title: metadata.title,
+      channel: metadata.channel,
+      thumbnail: metadata.thumbnail,
+      originalUrl: metadata.originalUrl,
+      importedAt: new Date().toISOString(),
     },
     ...(input.collectionId ? { collectionId: input.collectionId } : {}),
   });

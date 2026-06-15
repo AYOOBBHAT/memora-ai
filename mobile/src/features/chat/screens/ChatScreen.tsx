@@ -15,9 +15,10 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import type { ChatCitationSource } from '../../../api/types';
+import type { ChatCitationSource, ChatCollectionScope } from '../../../api/types';
 import { ChatInput } from '../components/ChatInput';
 import { ChatMessageBubble } from '../components/ChatMessageBubble';
+import { CollectionScopeBadge } from '../components/CollectionScopeBadge';
 import { ErrorBanner } from '../../collections/components/ErrorBanner';
 import { useSendChat } from '../../../hooks/mutations/useSendChat';
 import { useConversation } from '../../../hooks/queries/useConversation';
@@ -45,13 +46,19 @@ export function ChatScreen({ navigation, route }: Props) {
 
   const conversationId = useChatStore((state) => state.conversationId);
   const conversationTitle = useChatStore((state) => state.conversationTitle);
+  const storedCollectionIds = useChatStore((state) => state.collectionIds);
+  const scopedCollection = useChatStore((state) => state.scopedCollection);
   const messages = useChatStore((state) => state.messages);
   const addMessage = useChatStore((state) => state.addMessage);
   const startNewChat = useChatStore((state) => state.startNewChat);
   const setActiveConversation = useChatStore((state) => state.setActiveConversation);
   const setConversationMeta = useChatStore((state) => state.setConversationMeta);
+  const setCollectionScope = useChatStore((state) => state.setCollectionScope);
+  const setCollectionIds = useChatStore((state) => state.setCollectionIds);
+  const clearCollectionScope = useChatStore((state) => state.clearCollectionScope);
 
   const resumeConversationId = route.params?.conversationId;
+  const launchCollectionId = route.params?.collectionId;
   const { data: conversationDetail, isLoading: isLoadingConversation } =
     useConversation(resumeConversationId ?? null);
 
@@ -63,15 +70,67 @@ export function ChatScreen({ navigation, route }: Props) {
       return;
     }
 
+    const collectionIds = conversationDetail.conversation.collectionIds ?? [];
+    const singleCollection =
+      collectionIds.length === 1
+        ? collections.find((collection) => collection.id === collectionIds[0])
+        : undefined;
+
     setActiveConversation({
       conversationId: conversationDetail.conversation.id,
       title: conversationDetail.conversation.title,
-      collectionIds: conversationDetail.conversation.collectionIds ?? [],
+      collectionIds,
+      scopedCollection: singleCollection
+        ? {
+            id: singleCollection.id,
+            name: singleCollection.name,
+            icon: singleCollection.icon,
+            color: singleCollection.color,
+          }
+        : null,
       messages: conversationDetail.messages.map(historyMessageToChatMessage),
     });
-    setSelectedCollectionIds(conversationDetail.conversation.collectionIds ?? []);
+    setSelectedCollectionIds(collectionIds);
     navigation.setParams({ conversationId: undefined });
-  }, [conversationDetail, navigation, resumeConversationId, setActiveConversation]);
+  }, [collections, conversationDetail, navigation, resumeConversationId, setActiveConversation]);
+
+  useEffect(() => {
+    if (resumeConversationId || launchCollectionId) {
+      return;
+    }
+
+    if (storedCollectionIds.length > 0) {
+      setSelectedCollectionIds(storedCollectionIds);
+    }
+  }, [launchCollectionId, resumeConversationId, storedCollectionIds]);
+
+  useEffect(() => {
+    if (!launchCollectionId || collections.length === 0) {
+      return;
+    }
+
+    const collection = collections.find((item) => item.id === launchCollectionId);
+    if (!collection) {
+      return;
+    }
+
+    startNewChat();
+    const scope: ChatCollectionScope = {
+      id: collection.id,
+      name: collection.name,
+      icon: collection.icon,
+      color: collection.color,
+    };
+    setCollectionScope(scope);
+    setSelectedCollectionIds([collection.id]);
+    navigation.setParams({ collectionId: undefined });
+  }, [
+    collections,
+    launchCollectionId,
+    navigation,
+    setCollectionScope,
+    startNewChat,
+  ]);
 
   const scrollToBottom = useCallback(() => {
     if (messages.length === 0) {
@@ -156,13 +215,27 @@ export function ChatScreen({ navigation, route }: Props) {
     [navigation],
   );
 
-  const toggleCollection = useCallback((collectionId: string) => {
-    setSelectedCollectionIds((current) =>
-      current.includes(collectionId)
-        ? current.filter((id) => id !== collectionId)
-        : [...current, collectionId],
-    );
-  }, []);
+  const toggleCollection = useCallback(
+    (collectionId: string) => {
+      if (scopedCollection) {
+        return;
+      }
+
+      setSelectedCollectionIds((current) => {
+        const next = current.includes(collectionId)
+          ? current.filter((id) => id !== collectionId)
+          : [...current, collectionId];
+        setCollectionIds(next);
+        return next;
+      });
+    },
+    [scopedCollection, setCollectionIds],
+  );
+
+  const handleClearCollectionScope = useCallback(() => {
+    clearCollectionScope();
+    setSelectedCollectionIds([]);
+  }, [clearCollectionScope]);
 
   const sendMessage = useCallback(
     (message: string, collectionIdsOverride?: string[]) => {
@@ -186,22 +259,38 @@ export function ChatScreen({ navigation, route }: Props) {
         collectionIdsOverride ??
         (selectedCollectionIds.length > 0 ? selectedCollectionIds : undefined);
 
-      sendChat.mutate(
-        {
-          message: trimmed,
-          collectionIds,
-          conversationId: conversationId ?? undefined,
-        },
-        {
-          onSuccess: (response) => {
-            if (!conversationId && response.conversationId) {
-              setConversationMeta({
-                conversationId: response.conversationId,
-                title: trimmed,
-              });
-            }
+      if (collectionIds?.length) {
+        setCollectionIds(collectionIds);
+      }
 
-            addMessage({
+      const chatPayload =
+        collectionIds?.length === 1
+          ? {
+              message: trimmed,
+              collectionId: collectionIds[0],
+              conversationId: conversationId ?? undefined,
+            }
+          : {
+              message: trimmed,
+              collectionIds,
+              conversationId: conversationId ?? undefined,
+            };
+
+      sendChat.mutate(chatPayload, {
+        onSuccess: (response) => {
+          if (!conversationId && response.conversationId) {
+            setConversationMeta({
+              conversationId: response.conversationId,
+              title: trimmed,
+            });
+          }
+
+          if (response.scopedCollections?.length === 1) {
+            setCollectionScope(response.scopedCollections[0]);
+            setSelectedCollectionIds([response.scopedCollections[0].id]);
+          }
+
+          addMessage({
               id: response.messageId ?? createChatMessageId(),
               role: 'assistant',
               content: response.answer,
@@ -223,12 +312,19 @@ export function ChatScreen({ navigation, route }: Props) {
               ),
               createdAt: new Date().toISOString(),
               error: true,
-            });
-          },
+          });
         },
-      );
+      });
     },
-    [addMessage, conversationId, selectedCollectionIds, sendChat, setConversationMeta],
+    [
+      addMessage,
+      conversationId,
+      selectedCollectionIds,
+      sendChat,
+      setCollectionIds,
+      setCollectionScope,
+      setConversationMeta,
+    ],
   );
 
   const handleSend = useCallback(() => {
@@ -306,7 +402,7 @@ export function ChatScreen({ navigation, route }: Props) {
   );
 
   const collectionFilter =
-    collections.length > 0 ? (
+    !scopedCollection && collections.length > 0 ? (
       <View
         style={[
           styles.filterBar,
@@ -374,6 +470,9 @@ export function ChatScreen({ navigation, route }: Props) {
         <View style={styles.offlineBanner}>
           <ErrorBanner message="You're offline. Messages can't be sent until you're back online." />
         </View>
+      ) : null}
+      {scopedCollection ? (
+        <CollectionScopeBadge collection={scopedCollection} onClear={handleClearCollectionScope} />
       ) : null}
       {collectionFilter}
       <KeyboardAvoidingView

@@ -1,10 +1,12 @@
 import { Router } from 'express';
 import {
   getDocuments,
+  getRecentDocumentsHandler,
   getDocument,
   createDocumentHandler,
   uploadPdfHandler,
   importUrlHandler,
+  importYoutubeHandler,
   updateDocumentHandler,
   retryDocumentEmbeddingHandler,
   deleteDocumentHandler,
@@ -20,6 +22,7 @@ import {
   searchDocumentsSchema,
   uploadPdfFieldsSchema,
   importUrlSchema,
+  importYoutubeSchema,
 } from '@/validators/document.validator';
 
 const router = Router();
@@ -43,7 +46,9 @@ router.post(
   uploadPdfHandler,
 );
 router.post('/import-url', authenticate, validate(importUrlSchema), importUrlHandler);
+router.post('/import-youtube', authenticate, validate(importYoutubeSchema), importYoutubeHandler);
 router.post('/search', authenticate, validate(searchDocumentsSchema), searchDocumentsHandler);
+router.get('/recent', authenticate, getRecentDocumentsHandler);
 router.get(
   '/:id',
   authenticate,

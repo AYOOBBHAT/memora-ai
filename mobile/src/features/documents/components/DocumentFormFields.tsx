@@ -37,7 +37,7 @@ const SOURCE_TYPES: { type: DocumentSourceType; label: string; enabled: boolean 
   { type: 'text', label: 'Text', enabled: true },
   { type: 'url', label: 'URL', enabled: true },
   { type: 'pdf', label: 'PDF', enabled: true },
-  { type: 'youtube', label: 'YouTube', enabled: false },
+  { type: 'youtube', label: 'YouTube', enabled: true },
   { type: 'upload', label: 'Upload', enabled: false },
 ];
 

@@ -13,6 +13,8 @@ export interface IDocument {
   embeddingStatus: DocumentEmbeddingStatus;
   embeddingError?: string;
   embeddingUpdatedAt?: Date;
+  lastViewedAt?: Date;
+  lastOpenedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -68,6 +70,14 @@ const documentSchema = new Schema<IDocumentDocument>(
       type: Date,
       default: undefined,
     },
+    lastViewedAt: {
+      type: Date,
+      default: undefined,
+    },
+    lastOpenedAt: {
+      type: Date,
+      default: undefined,
+    },
   },
   {
     timestamps: true,
@@ -76,6 +86,9 @@ const documentSchema = new Schema<IDocumentDocument>(
 
 // List a user's documents newest-first.
 documentSchema.index({ userId: 1, createdAt: -1 });
+
+// Recently viewed documents for a user.
+documentSchema.index({ userId: 1, lastViewedAt: -1 });
 
 // Filter documents by embedding readiness within a user scope (e.g. completed + sorted).
 // When Atlas Vector Search is added, every $vectorSearch query MUST include a userId

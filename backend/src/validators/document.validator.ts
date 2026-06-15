@@ -9,6 +9,8 @@ const documentMetadataSchema = z
     mimeType: z.string().optional(),
     fileSize: z.number().positive().optional(),
     youtubeVideoId: z.string().optional(),
+    channel: z.string().optional(),
+    thumbnail: z.string().url().optional(),
     originalUrl: z.string().url().optional(),
     storageKey: z.string().optional(),
   })
@@ -97,6 +99,36 @@ export const importUrlSchema = z.object({
     .optional(),
 });
 
+const youtubeUrlSchema = httpHttpsUrlSchema.refine(
+  (value) => {
+    try {
+      const host = new URL(value).hostname.toLowerCase();
+      return (
+        host === 'youtu.be' ||
+        host === 'youtube.com' ||
+        host === 'www.youtube.com' ||
+        host === 'm.youtube.com'
+      );
+    } catch {
+      return false;
+    }
+  },
+  'URL must be a valid YouTube link (youtube.com or youtu.be)',
+);
+
+export const importYoutubeSchema = z.object({
+  url: youtubeUrlSchema,
+  title: z
+    .string()
+    .max(500, 'Title cannot exceed 500 characters')
+    .trim()
+    .optional(),
+  collectionId: z
+    .string()
+    .regex(/^[0-9a-fA-F]{24}$/, 'Invalid collection ID')
+    .optional(),
+});
+
 export const searchDocumentsSchema = z.object({
   query: z.string().min(1, 'Query is required').trim(),
   limit: z.coerce.number().int().min(1).max(5).optional(),
@@ -110,5 +142,6 @@ export type CreateDocumentInput = z.infer<typeof createDocumentSchema>;
 export type UpdateDocumentInput = z.infer<typeof updateDocumentSchema>;
 export type UploadPdfInput = z.infer<typeof uploadPdfFieldsSchema>;
 export type ImportUrlInput = z.infer<typeof importUrlSchema>;
+export type ImportYoutubeInput = z.infer<typeof importYoutubeSchema>;
 export type DocumentIdParams = z.infer<typeof documentIdParamSchema>;
 export type SearchDocumentsInput = z.infer<typeof searchDocumentsSchema>;

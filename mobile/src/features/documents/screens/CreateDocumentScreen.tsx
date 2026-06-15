@@ -18,6 +18,7 @@ import {
 } from '../components/DocumentFormFields';
 import { PdfUploadButton } from '../components/PdfUploadButton';
 import { UrlImportButton } from '../components/UrlImportButton';
+import { YoutubeImportButton } from '../components/YoutubeImportButton';
 import { useCreateDocument } from '../../../hooks/mutations/useCreateDocument';
 import { getApiErrorMessage } from '../../../lib/apiError';
 import type { DocumentsStackParamList } from '../../../navigation/types';
@@ -38,7 +39,8 @@ export function CreateDocumentScreen({ navigation, route }: Props) {
 
   const isPdfMode = values.sourceType === 'pdf';
   const isUrlMode = values.sourceType === 'url';
-  const isAlternateSourceMode = isPdfMode || isUrlMode;
+  const isYoutubeMode = values.sourceType === 'youtube';
+  const isAlternateSourceMode = isPdfMode || isUrlMode || isYoutubeMode;
 
   const handleSubmit = () => {
     setApiError(null);
@@ -106,6 +108,16 @@ export function CreateDocumentScreen({ navigation, route }: Props) {
 
         {isUrlMode ? (
           <UrlImportButton
+            collectionId={values.collectionId}
+            title={values.title}
+            onSuccess={(document) => {
+              navigation.replace('DocumentDetail', { documentId: document.id });
+            }}
+          />
+        ) : null}
+
+        {isYoutubeMode ? (
+          <YoutubeImportButton
             collectionId={values.collectionId}
             title={values.title}
             onSuccess={(document) => {

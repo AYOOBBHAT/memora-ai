@@ -286,6 +286,7 @@ Existing local accounts with the same email are logged in without a password on 
 | POST | `/documents` | Bearer access token | Create a document |
 | POST | `/documents/upload-pdf` | Bearer access token | Upload a text-based PDF (multipart, max 10MB) |
 | POST | `/documents/import-url` | Bearer access token | Import article text from a public http(s) URL |
+| POST | `/documents/import-youtube` | Bearer access token | Import transcript from a public YouTube video (youtube.com / youtu.be) |
 | POST | `/documents/search` | Bearer access token | Semantic vector search over user's documents |
 | GET | `/documents/:id` | Bearer access token | Get a document by ID |
 | PUT | `/documents/:id` | Bearer access token | Update a document |

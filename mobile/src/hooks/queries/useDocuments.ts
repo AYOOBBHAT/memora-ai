@@ -14,6 +14,16 @@ export function useDocuments() {
   });
 }
 
+export function useRecentDocuments() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+  return useQuery({
+    queryKey: queryKeys.documents.recent(),
+    queryFn: documentsService.getRecentDocuments,
+    enabled: isAuthenticated,
+  });
+}
+
 export function useDocument(documentId: string) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 

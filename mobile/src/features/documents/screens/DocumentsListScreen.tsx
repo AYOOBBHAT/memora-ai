@@ -2,29 +2,88 @@ import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useLayoutEffect } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
   Pressable,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import { DocumentListItem } from '../../collections/components/DocumentListItem';
 import { ErrorBanner } from '../../collections/components/ErrorBanner';
 import { PdfUploadButton } from '../components/PdfUploadButton';
+import { RecentDocumentListItem } from '../components/RecentDocumentListItem';
 import { UrlImportButton } from '../components/UrlImportButton';
-import { useDocuments } from '../../../hooks/queries/useDocuments';
+import { YoutubeImportButton } from '../components/YoutubeImportButton';
+import { useRecentDocuments } from '../../../hooks/queries/useDocuments';
 import { getApiErrorMessage } from '../../../lib/apiError';
 import type { DocumentsStackParamList } from '../../../navigation/types';
 import { useTheme } from '../../../theme/ThemeProvider';
 
 type Props = NativeStackScreenProps<DocumentsStackParamList, 'DocumentsList'>;
 
+function SectionHeader({ title }: { title: string }) {
+  const { theme } = useTheme();
+
+  return (
+    <Text
+      style={[
+        styles.sectionTitle,
+        {
+          color: theme.colors.text,
+          fontSize: theme.typography.fontSizes.lg,
+          fontWeight: theme.typography.fontWeights.semibold,
+        },
+      ]}
+    >
+      {title}
+    </Text>
+  );
+}
+
+function SectionEmpty({ message }: { message: string }) {
+  const { theme } = useTheme();
+
+  return (
+    <View
+      style={[
+        styles.sectionEmpty,
+        {
+          backgroundColor: theme.colors.surfaceSecondary,
+          borderColor: theme.colors.border,
+        },
+      ]}
+    >
+      <Text
+        style={[
+          styles.sectionEmptyText,
+          {
+            color: theme.colors.textSecondary,
+            fontSize: theme.typography.fontSizes.sm,
+          },
+        ]}
+      >
+        {message}
+      </Text>
+    </View>
+  );
+}
+
 export function DocumentsListScreen({ navigation }: Props) {
   const { theme } = useTheme();
-  const { data: documents = [], isLoading, isError, error, refetch, isRefetching } = useDocuments();
+  const {
+    data: recent,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isRefetching,
+  } = useRecentDocuments();
+
+  const recentlyViewed = recent?.recentlyViewed ?? [];
+  const recentlyAdded = recent?.recentlyAdded ?? [];
+  const hasAnyDocuments = recentlyViewed.length > 0 || recentlyAdded.length > 0;
 
   const handleCreatePress = useCallback(() => {
     navigation.navigate('CreateDocument');
@@ -82,7 +141,7 @@ export function DocumentsListScreen({ navigation }: Props) {
     );
   }
 
-  if (documents.length === 0) {
+  if (!hasAnyDocuments) {
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={[styles.centered, styles.padded]}>
@@ -144,6 +203,11 @@ export function DocumentsListScreen({ navigation }: Props) {
             variant="secondary"
             onSuccess={(document) => handlePdfUploadSuccess(document.id)}
           />
+          <YoutubeImportButton
+            label="Import YouTube"
+            variant="secondary"
+            onSuccess={(document) => handlePdfUploadSuccess(document.id)}
+          />
         </View>
         <Pressable
           accessibilityRole="button"
@@ -165,22 +229,8 @@ export function DocumentsListScreen({ navigation }: Props) {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <View style={styles.uploadBar}>
-        <PdfUploadButton
-          label="Upload PDF"
-          variant="secondary"
-          onSuccess={(document) => handlePdfUploadSuccess(document.id)}
-        />
-        <UrlImportButton
-          label="Import URL"
-          variant="secondary"
-          onSuccess={(document) => handlePdfUploadSuccess(document.id)}
-        />
-      </View>
-      <FlatList
-        contentContainerStyle={styles.listContent}
-        data={documents}
-        keyExtractor={(item) => item.id}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl
             refreshing={isRefetching}
@@ -188,10 +238,55 @@ export function DocumentsListScreen({ navigation }: Props) {
             onRefresh={() => void refetch()}
           />
         }
-        renderItem={({ item }) => (
-          <DocumentListItem document={item} onPress={() => handleDocumentPress(item.id)} />
-        )}
-      />
+      >
+        <View style={styles.uploadBar}>
+          <PdfUploadButton
+            label="Upload PDF"
+            variant="secondary"
+            onSuccess={(document) => handlePdfUploadSuccess(document.id)}
+          />
+          <UrlImportButton
+            label="Import URL"
+            variant="secondary"
+            onSuccess={(document) => handlePdfUploadSuccess(document.id)}
+          />
+          <YoutubeImportButton
+            label="Import YouTube"
+            variant="secondary"
+            onSuccess={(document) => handlePdfUploadSuccess(document.id)}
+          />
+        </View>
+
+        <View style={styles.section}>
+          <SectionHeader title="Recently Viewed" />
+          {recentlyViewed.length === 0 ? (
+            <SectionEmpty message="Open a document to see it here." />
+          ) : (
+            recentlyViewed.map((document) => (
+              <RecentDocumentListItem
+                key={document.id}
+                document={document}
+                onPress={() => handleDocumentPress(document.id)}
+              />
+            ))
+          )}
+        </View>
+
+        <View style={styles.section}>
+          <SectionHeader title="Recently Added" />
+          {recentlyAdded.length === 0 ? (
+            <SectionEmpty message="New documents will appear here." />
+          ) : (
+            recentlyAdded.map((document) => (
+              <RecentDocumentListItem
+                key={document.id}
+                document={document}
+                onPress={() => handleDocumentPress(document.id)}
+              />
+            ))
+          )}
+        </View>
+      </ScrollView>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Create document"
@@ -221,6 +316,24 @@ const styles = StyleSheet.create({
   uploadBar: {
     paddingHorizontal: 16,
     paddingTop: 12,
+    gap: 8,
+  },
+  scrollContent: {
+    paddingBottom: 96,
+  },
+  section: {
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    gap: 12,
+  },
+  sectionTitle: {},
+  sectionEmpty: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 16,
+  },
+  sectionEmptyText: {
+    textAlign: 'center',
   },
   centered: {
     flex: 1,
@@ -229,11 +342,6 @@ const styles = StyleSheet.create({
   },
   padded: {
     padding: 24,
-  },
-  listContent: {
-    padding: 16,
-    gap: 12,
-    paddingBottom: 96,
   },
   emptyIcon: {
     fontSize: 48,

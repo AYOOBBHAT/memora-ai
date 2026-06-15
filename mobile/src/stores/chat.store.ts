@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
-import type { ChatCitationSource } from '../api/types';
+import type { ChatCitationSource, ChatCollectionScope } from '../api/types';
 
 export interface ChatMessage {
   id: string;
@@ -17,17 +17,22 @@ interface ChatState {
   conversationId: string | null;
   conversationTitle: string | null;
   collectionIds: string[];
+  scopedCollection: ChatCollectionScope | null;
   messages: ChatMessage[];
   setActiveConversation: (params: {
     conversationId: string | null;
     title?: string | null;
     collectionIds?: string[];
+    scopedCollection?: ChatCollectionScope | null;
     messages: ChatMessage[];
   }) => void;
   setConversationMeta: (params: {
     conversationId: string;
     title?: string | null;
   }) => void;
+  setCollectionScope: (scope: ChatCollectionScope | null) => void;
+  setCollectionIds: (collectionIds: string[]) => void;
+  clearCollectionScope: () => void;
   addMessage: (message: ChatMessage) => void;
   startNewChat: () => void;
 }
@@ -38,12 +43,20 @@ export const useChatStore = create<ChatState>()(
       conversationId: null,
       conversationTitle: null,
       collectionIds: [],
+      scopedCollection: null,
       messages: [],
-      setActiveConversation: ({ conversationId, title, collectionIds, messages }) =>
+      setActiveConversation: ({
+        conversationId,
+        title,
+        collectionIds,
+        scopedCollection,
+        messages,
+      }) =>
         set({
           conversationId,
           conversationTitle: title ?? null,
           collectionIds: collectionIds ?? [],
+          scopedCollection: scopedCollection ?? null,
           messages,
         }),
       setConversationMeta: ({ conversationId, title }) =>
@@ -51,6 +64,17 @@ export const useChatStore = create<ChatState>()(
           conversationId,
           conversationTitle: title ?? state.conversationTitle,
         })),
+      setCollectionScope: (scope) =>
+        set({
+          scopedCollection: scope,
+          collectionIds: scope ? [scope.id] : [],
+        }),
+      setCollectionIds: (collectionIds) => set({ collectionIds }),
+      clearCollectionScope: () =>
+        set({
+          scopedCollection: null,
+          collectionIds: [],
+        }),
       addMessage: (message) =>
         set((state) => ({
           messages: [...state.messages, message],
@@ -60,6 +84,7 @@ export const useChatStore = create<ChatState>()(
           conversationId: null,
           conversationTitle: null,
           collectionIds: [],
+          scopedCollection: null,
           messages: [],
         }),
     }),

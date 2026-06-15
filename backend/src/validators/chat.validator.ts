@@ -4,18 +4,24 @@ const objectIdSchema = z
   .string()
   .regex(/^[0-9a-fA-F]{24}$/, 'Invalid ID');
 
-export const chatMessageSchema = z.object({
-  message: z
-    .string()
-    .min(1, 'Message is required')
-    .max(2000, 'Message cannot exceed 2000 characters')
-    .trim(),
-  collectionIds: z
-    .array(objectIdSchema)
-    .max(20, 'Cannot filter by more than 20 collections')
-    .optional(),
-  conversationId: objectIdSchema.optional(),
-});
+export const chatMessageSchema = z
+  .object({
+    message: z
+      .string()
+      .min(1, 'Message is required')
+      .max(2000, 'Message cannot exceed 2000 characters')
+      .trim(),
+    collectionId: objectIdSchema.optional(),
+    collectionIds: z
+      .array(objectIdSchema)
+      .max(20, 'Cannot filter by more than 20 collections')
+      .optional(),
+    conversationId: objectIdSchema.optional(),
+  })
+  .refine((data) => !(data.collectionId && data.collectionIds?.length), {
+    message: 'Provide either collectionId or collectionIds, not both',
+    path: ['collectionId'],
+  });
 
 export const conversationIdParamSchema = z.object({
   id: objectIdSchema,

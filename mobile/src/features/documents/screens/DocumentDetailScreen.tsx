@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useLayoutEffect } from 'react';
+import { useCallback, useEffect, useLayoutEffect } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Linking,
   Pressable,
   ScrollView,
@@ -11,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { ErrorBanner } from '../../collections/components/ErrorBanner';
 import { EmbeddingStatusBadge } from '../components/EmbeddingStatusBadge';
@@ -19,6 +21,7 @@ import { useDeleteDocument } from '../../../hooks/mutations/useDeleteDocument';
 import { useRetryEmbedding } from '../../../hooks/mutations/useRetryEmbedding';
 import { useDocument } from '../../../hooks/queries/useDocuments';
 import { getApiErrorMessage } from '../../../lib/apiError';
+import { queryKeys } from '../../../lib/queryClient';
 import type { DocumentsStackParamList } from '../../../navigation/types';
 import { useTheme } from '../../../theme/ThemeProvider';
 
@@ -27,9 +30,16 @@ type Props = NativeStackScreenProps<DocumentsStackParamList, 'DocumentDetail'>;
 export function DocumentDetailScreen({ navigation, route }: Props) {
   const { documentId } = route.params;
   const { theme } = useTheme();
+  const queryClient = useQueryClient();
   const { data: document, isLoading, isError, error, refetch } = useDocument(documentId);
   const deleteDocument = useDeleteDocument();
   const retryEmbedding = useRetryEmbedding(documentId);
+
+  useEffect(() => {
+    if (document) {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.documents.recent() });
+    }
+  }, [document?.id, queryClient]);
 
   const handleEdit = useCallback(() => {
     navigation.navigate('EditDocument', { documentId });
@@ -57,8 +67,14 @@ export function DocumentDetailScreen({ navigation, route }: Props) {
   }, [retryEmbedding]);
 
   const originalUrl =
-    document?.sourceType === 'url' && typeof document.metadata?.originalUrl === 'string'
-      ? document.metadata.originalUrl
+    typeof document?.metadata?.originalUrl === 'string' ? document.metadata.originalUrl : null;
+
+  const thumbnailUrl =
+    typeof document?.metadata?.thumbnail === 'string' ? document.metadata.thumbnail : null;
+
+  const channelName =
+    document?.sourceType === 'youtube' && typeof document.metadata?.channel === 'string'
+      ? document.metadata.channel
       : null;
 
   const handleOpenOriginalUrl = useCallback(() => {
@@ -209,13 +225,39 @@ export function DocumentDetailScreen({ navigation, route }: Props) {
         {document.title}
       </Text>
 
+      {thumbnailUrl ? (
+        <Image
+          accessibilityLabel="Video thumbnail"
+          source={{ uri: thumbnailUrl }}
+          style={styles.thumbnail}
+        />
+      ) : null}
+
+      {channelName ? (
+        <Text
+          style={[
+            styles.channelName,
+            {
+              color: theme.colors.textSecondary,
+              fontSize: theme.typography.fontSizes.sm,
+            },
+          ]}
+        >
+          {channelName}
+        </Text>
+      ) : null}
+
       {originalUrl ? (
         <Pressable
           accessibilityRole="link"
           onPress={handleOpenOriginalUrl}
           style={({ pressed }) => [styles.sourceLink, { opacity: pressed ? 0.7 : 1 }]}
         >
-          <Ionicons color={theme.colors.primary} name="open-outline" size={16} />
+          <Ionicons
+            color={theme.colors.primary}
+            name={document.sourceType === 'youtube' ? 'logo-youtube' : 'open-outline'}
+            size={16}
+          />
           <Text
             numberOfLines={2}
             style={[
@@ -226,7 +268,7 @@ export function DocumentDetailScreen({ navigation, route }: Props) {
               },
             ]}
           >
-            {originalUrl}
+            {document.sourceType === 'youtube' ? 'Watch on YouTube' : originalUrl}
           </Text>
         </Pressable>
       ) : null}
@@ -300,6 +342,13 @@ const styles = StyleSheet.create({
   },
   retryText: {},
   title: {},
+  thumbnail: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: 12,
+    backgroundColor: '#111827',
+  },
+  channelName: {},
   sourceLink: {
     flexDirection: 'row',
     alignItems: 'center',

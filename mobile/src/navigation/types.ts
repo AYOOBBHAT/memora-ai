@@ -20,6 +20,7 @@ export type ChatStackParamList = {
         conversationId?: string;
         initialMessage?: string;
         autoSend?: boolean;
+        collectionId?: string;
       }
     | undefined;
   ChatHistory: undefined;

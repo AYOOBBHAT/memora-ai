@@ -8,12 +8,13 @@ import {
   ConversationModel,
   IConversationDocument,
 } from '@/models/Conversation.model';
-import { verifyUserCollections } from '@/services/collection.service';
+import { getCollectionById, verifyUserCollections } from '@/services/collection.service';
 import { generateRagAnswer } from '@/services/chat.service';
 import { escapeRegex } from '@/services/search.service';
 import { HTTP_STATUS } from '@/constants/httpStatus';
 import type {
   ChatCitationSource,
+  ChatCollectionScope,
   ChatResponse,
   ConversationDetail,
   ConversationListItem,
@@ -171,15 +172,50 @@ export interface PersistedChatResponse extends ChatResponse {
   messageId: string;
 }
 
+/** Resolves collection scope from singular `collectionId` or plural `collectionIds`. */
+export function resolveChatCollectionIds(input: ChatMessageInput): string[] | undefined {
+  if (input.collectionId) {
+    return [input.collectionId];
+  }
+
+  if (input.collectionIds?.length) {
+    return input.collectionIds;
+  }
+
+  return undefined;
+}
+
+async function getScopedCollectionsMetadata(
+  userId: string,
+  collectionIds?: string[],
+): Promise<ChatCollectionScope[]> {
+  if (!collectionIds?.length) {
+    return [];
+  }
+
+  const uniqueIds = [...new Set(collectionIds)];
+  const collections = await Promise.all(
+    uniqueIds.map((collectionId) => getCollectionById(userId, collectionId)),
+  );
+
+  return collections.map((collection) => ({
+    id: collection.id,
+    name: collection.name,
+    icon: collection.icon,
+    color: collection.color,
+  }));
+}
+
 export async function sendChatWithPersistence(
   userId: string,
   input: ChatMessageInput,
 ): Promise<PersistedChatResponse> {
-  const { message, collectionIds, conversationId } = input;
+  const { message, conversationId } = input;
+  const requestedCollectionIds = resolveChatCollectionIds(input);
   const now = new Date();
 
-  if (collectionIds?.length) {
-    await verifyUserCollections(userId, collectionIds);
+  if (requestedCollectionIds?.length) {
+    await verifyUserCollections(userId, requestedCollectionIds);
   }
 
   let conversation: IConversationDocument;
@@ -187,21 +223,21 @@ export async function sendChatWithPersistence(
   if (conversationId) {
     conversation = await getOwnedConversation(userId, conversationId);
 
-    if (collectionIds?.length) {
-      conversation.collectionIds = collectionIds.map((id) => new Types.ObjectId(id));
+    if (requestedCollectionIds?.length) {
+      conversation.collectionIds = requestedCollectionIds.map((id) => new Types.ObjectId(id));
       await conversation.save();
     }
   } else {
     conversation = await ConversationModel.create({
       userId,
       title: deriveConversationTitle(message),
-      collectionIds: collectionIds?.map((id) => new Types.ObjectId(id)),
+      collectionIds: requestedCollectionIds?.map((id) => new Types.ObjectId(id)),
     });
   }
 
   const storedCollectionIds = conversation.collectionIds?.map((id) => id.toString());
-  const effectiveCollectionIds = collectionIds?.length
-    ? collectionIds
+  const effectiveCollectionIds = requestedCollectionIds?.length
+    ? requestedCollectionIds
     : storedCollectionIds?.length
       ? storedCollectionIds
       : undefined;
@@ -228,8 +264,11 @@ export async function sendChatWithPersistence(
   conversation.updatedAt = new Date();
   await conversation.save();
 
+  const scopedCollections = await getScopedCollectionsMetadata(userId, effectiveCollectionIds);
+
   return {
     ...ragResult,
+    scopedCollections: scopedCollections.length > 0 ? scopedCollections : undefined,
     conversationId: conversation._id.toString(),
     messageId: assistantMessage._id.toString(),
   };

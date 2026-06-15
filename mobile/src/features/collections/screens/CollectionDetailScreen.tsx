@@ -18,6 +18,7 @@ import { DocumentListItem } from '../components/DocumentListItem';
 import { ErrorBanner } from '../components/ErrorBanner';
 import { PdfUploadButton } from '../../documents/components/PdfUploadButton';
 import { UrlImportButton } from '../../documents/components/UrlImportButton';
+import { YoutubeImportButton } from '../../documents/components/YoutubeImportButton';
 import { DEFAULT_COLLECTION_COLOR, DEFAULT_COLLECTION_ICON } from '../constants';
 import { useDeleteCollection } from '../../../hooks/mutations/useDeleteCollection';
 import { useCollection } from '../../../hooks/queries/useCollection';
@@ -73,6 +74,13 @@ export function CollectionDetailScreen({ navigation, route }: Props) {
   const handleCreateDocument = useCallback(() => {
     navigation.navigate('Home', {
       screen: 'CreateDocument',
+      params: { collectionId },
+    });
+  }, [collectionId, navigation]);
+
+  const handleChatWithCollection = useCallback(() => {
+    navigation.navigate('Chat', {
+      screen: 'ChatMain',
       params: { collectionId },
     });
   }, [collectionId, navigation]);
@@ -230,6 +238,32 @@ export function CollectionDetailScreen({ navigation, route }: Props) {
               >
                 {documents.length} {documents.length === 1 ? 'document' : 'documents'}
               </Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Chat with this collection"
+                onPress={handleChatWithCollection}
+                style={({ pressed }) => [
+                  styles.chatButton,
+                  {
+                    backgroundColor: theme.colors.primary,
+                    opacity: pressed ? 0.85 : 1,
+                  },
+                ]}
+              >
+                <Ionicons color={theme.colors.primaryText} name="chatbubble-ellipses-outline" size={18} />
+                <Text
+                  style={[
+                    styles.chatButtonText,
+                    {
+                      color: theme.colors.primaryText,
+                      fontSize: theme.typography.fontSizes.sm,
+                      fontWeight: theme.typography.fontWeights.semibold,
+                    },
+                  ]}
+                >
+                  Chat with Collection
+                </Text>
+              </Pressable>
             </View>
           </View>
         </View>
@@ -263,6 +297,13 @@ export function CollectionDetailScreen({ navigation, route }: Props) {
         <UrlImportButton
           collectionId={collectionId}
           label="Import URL to collection"
+          variant="secondary"
+          onSuccess={(document) => handlePdfUploadSuccess(document.id)}
+        />
+
+        <YoutubeImportButton
+          collectionId={collectionId}
+          label="Import YouTube to collection"
           variant="secondary"
           onSuccess={(document) => handlePdfUploadSuccess(document.id)}
         />
@@ -320,6 +361,12 @@ export function CollectionDetailScreen({ navigation, route }: Props) {
             <UrlImportButton
               collectionId={collectionId}
               label="Import URL"
+              variant="secondary"
+              onSuccess={(document) => handlePdfUploadSuccess(document.id)}
+            />
+            <YoutubeImportButton
+              collectionId={collectionId}
+              label="Import YouTube"
               variant="secondary"
               onSuccess={(document) => handlePdfUploadSuccess(document.id)}
             />
@@ -408,6 +455,18 @@ const styles = StyleSheet.create({
   documentCount: {
     marginTop: 4,
   },
+  chatButton: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    borderRadius: 10,
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+    minHeight: 40,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  chatButtonText: {},
   bannerWrap: {
     marginBottom: 4,
   },
