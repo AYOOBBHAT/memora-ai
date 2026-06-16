@@ -15,7 +15,8 @@ File template: `backend/.env.example`
 | `JWT_REFRESH_SECRET` | **Yes** | — | Secret for signing refresh tokens (min 32 characters) |
 | `JWT_ACCESS_EXPIRES_IN` | No | `15m` | Access token lifetime (e.g. `15m`, `1h`) |
 | `JWT_REFRESH_EXPIRES_IN` | No | `7d` | Refresh token lifetime |
-| `CORS_ORIGIN` | **Yes** | — | Allowed browser origin URL (e.g. `https://app.example.com`) |
+| `CORS_ORIGINS` | Prod: **Yes** · Dev: optional | Dev defaults | Comma-separated **browser** origins (e.g. `http://localhost:3000,http://localhost:19006`). HTTPS only in production; `*` forbidden in production. Native mobile (Expo/APK) omits `Origin` and is allowed. |
+| `CORS_ORIGIN` | Deprecated | — | Legacy single origin; use `CORS_ORIGINS` instead |
 | `BCRYPT_SALT_ROUNDS` | No | `12` | Password hashing cost (10–15) |
 | `GOOGLE_CLIENT_ID` | For Google sign-in | — | OAuth 2.0 **Web** client ID (always verified). See [google-auth-setup.md](./google-auth-setup.md) |
 | `GOOGLE_ANDROID_CLIENT_ID` | For Play Store Android | — | OAuth 2.0 **Android** client ID; ID tokens from EAS/Play builds use this as `aud` |
@@ -36,7 +37,7 @@ PORT=4000
 MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/memora?retryWrites=true&w=majority
 JWT_ACCESS_SECRET=local-dev-access-secret-min-32-chars!!
 JWT_REFRESH_SECRET=local-dev-refresh-secret-min-32-chars!
-CORS_ORIGIN=http://localhost:3000
+CORS_ORIGINS=http://localhost:3000,http://localhost:19006,http://localhost:8081
 HEALTH_ENDPOINTS_ENABLED=true
 GOOGLE_CLIENT_ID=123456789-web.apps.googleusercontent.com
 GOOGLE_ANDROID_CLIENT_ID=123456789-android.apps.googleusercontent.com
@@ -52,7 +53,7 @@ PORT=4000
 MONGODB_URI=mongodb+srv://prod-user:...@cluster.mongodb.net/memora?retryWrites=true&w=majority
 JWT_ACCESS_SECRET=<64-char-random-hex>
 JWT_REFRESH_SECRET=<64-char-random-hex>
-CORS_ORIGIN=https://your-web-app.example.com
+CORS_ORIGINS=https://your-web-app.example.com,https://your-legal-site.vercel.app
 HEALTH_ENDPOINTS_ENABLED=false
 GOOGLE_CLIENT_ID=...
 GOOGLE_ANDROID_CLIENT_ID=...
@@ -62,6 +63,9 @@ GROQ_API_KEY=...
 
 ### Notes
 
+- **CORS** applies to **browser** clients only. React Native (Expo dev, Android APK, iOS) does not send a browser `Origin` header and is allowed through CORS without being listed.
+- **Development:** If `CORS_ORIGINS` is unset, defaults include `localhost:3000`, `:19006` (Expo web), and `:8081`.
+- **Production (Railway):** Set `CORS_ORIGINS` to comma-separated **HTTPS** origins (e.g. legal site + web app). Wildcard `*` is rejected.
 - **Liveness** (`GET /api/v1/health/live`) is always public and does not depend on `HEALTH_ENDPOINTS_ENABLED`.
 - **Admin health** endpoints require `HEALTH_ENDPOINTS_ENABLED=true` plus `Authorization: Bearer <admin_access_token>`.
 - Omitting optional AI keys disables those features but the API still starts if core auth/DB vars are set.

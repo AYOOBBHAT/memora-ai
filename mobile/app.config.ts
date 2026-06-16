@@ -1,6 +1,19 @@
 import { ExpoConfig, ConfigContext } from 'expo/config';
 
+import { googleClientIdToNativeRedirectScheme } from './src/lib/googleOAuthRedirect';
 
+const googleAndroidAuthScheme = googleClientIdToNativeRedirectScheme(
+  process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? '',
+);
+const googleIosAuthScheme = googleClientIdToNativeRedirectScheme(
+  process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '',
+);
+
+const appSchemes = [
+  'memora',
+  googleAndroidAuthScheme,
+  googleIosAuthScheme,
+].filter((scheme): scheme is string => Boolean(scheme));
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
 
@@ -18,7 +31,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 
   userInterfaceStyle: 'automatic',
 
-  scheme: 'memora',
+  scheme: appSchemes.length === 1 ? appSchemes[0] : appSchemes,
 
   ios: {
 

@@ -44,7 +44,7 @@ cd backend
 cp .env.example .env
 ```
 
-Required for a minimal API: `MONGODB_URI`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `CORS_ORIGIN`.
+Required for a minimal API: `MONGODB_URI`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `CORS_ORIGINS` (production).
 
 For full features also set: `GOOGLE_AI_API_KEY`, `GROQ_API_KEY`, `GOOGLE_CLIENT_ID`.
 
@@ -54,7 +54,7 @@ Generate JWT secrets (32+ characters):
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-Set `NODE_ENV=production` and `CORS_ORIGIN` to your web client origin (or a placeholder if mobile-only).
+Set `NODE_ENV=production` and `CORS_ORIGINS` to your HTTPS web origins (comma-separated). Mobile-only APIs still require explicit origins for any browser clients; native APK/Expo requests omit `Origin` and are not blocked.
 
 ### 2. Build the image
 

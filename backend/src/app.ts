@@ -6,6 +6,7 @@ import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import pinoHttp from 'pino-http';
 import pino from 'pino';
+import { createCorsMiddlewareOptions } from '@/config/cors';
 import { env } from '@/config/env';
 import routes from '@/routes';
 import swaggerRoutes from '@/routes/swagger.routes';
@@ -18,12 +19,7 @@ export function createApp(): Application {
   const app = express();
 
   app.use(helmet());
-  app.use(
-    cors({
-      origin: env.CORS_ORIGIN,
-      credentials: true,
-    }),
-  );
+  app.use(cors(createCorsMiddlewareOptions(env.CORS_ORIGINS)));
   app.use(compression());
   app.use(express.json({ limit: '1mb' }));
   app.use(cookieParser());

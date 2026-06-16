@@ -12,6 +12,7 @@ import { getApiErrorMessage } from '../../../lib/apiError';
 import {
   extractGoogleIdToken,
   isGoogleSignInConfigured,
+  logGoogleSignInConfig,
   useGoogleIdTokenRequest,
 } from '../../../lib/googleSignIn';
 import { useTheme } from '../../../theme/ThemeProvider';
@@ -29,6 +30,10 @@ export function GoogleSignInButton({ onError }: GoogleSignInButtonProps) {
 
   const isLoading = isPrompting || googleSignIn.isPending;
   const isConfigured = isGoogleSignInConfigured();
+
+  useEffect(() => {
+    logGoogleSignInConfig(request);
+  }, [request]);
 
   useEffect(() => {
     if (!response) {

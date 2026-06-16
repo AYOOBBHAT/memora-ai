@@ -14,7 +14,7 @@ Use this checklist before launching Memora AI to production. Details for each it
 
 - [ ] `NODE_ENV=production`
 - [ ] `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` — unique, 32+ characters, cryptographically random
-- [ ] `CORS_ORIGIN` set to your web app origin (if applicable)
+- [ ] `CORS_ORIGINS` set to HTTPS web origins (comma-separated; no `*` in production)
 - [ ] `GOOGLE_AI_API_KEY` set (embeddings + semantic search)
 - [ ] `GROQ_API_KEY` set ([GROQ_SETUP.md](./GROQ_SETUP.md))
 - [ ] `GOOGLE_CLIENT_ID` set (Google sign-in — Web client, always required)
