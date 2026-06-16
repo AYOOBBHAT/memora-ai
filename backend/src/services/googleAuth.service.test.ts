@@ -11,6 +11,7 @@ vi.mock('google-auth-library', () => ({
 vi.mock('@/config/env', () => ({
   env: {
     GOOGLE_CLIENT_ID: 'test-client-id.apps.googleusercontent.com',
+    GOOGLE_ANDROID_CLIENT_ID: 'test-android-client-id.apps.googleusercontent.com',
   },
 }));
 
@@ -25,6 +26,7 @@ import { User } from '@/models/User.model';
 import {
   verifyGoogleIdToken,
   findOrCreateGoogleUser,
+  getGoogleIdTokenAudiences,
 } from '@/services/googleAuth.service';
 import { HTTP_STATUS } from '@/constants/httpStatus';
 
@@ -40,6 +42,15 @@ function mockGoogleTicket(payload: Record<string, unknown>) {
     getPayload: () => payload,
   });
 }
+
+describe('getGoogleIdTokenAudiences', () => {
+  it('includes Web and Android client IDs when both are configured', () => {
+    expect(getGoogleIdTokenAudiences()).toEqual([
+      'test-client-id.apps.googleusercontent.com',
+      'test-android-client-id.apps.googleusercontent.com',
+    ]);
+  });
+});
 
 describe('verifyGoogleIdToken', () => {
   beforeEach(() => {
@@ -60,7 +71,10 @@ describe('verifyGoogleIdToken', () => {
     expect(result).toEqual(googlePayload);
     expect(mockVerifyIdToken).toHaveBeenCalledWith({
       idToken: 'valid-id-token',
-      audience: 'test-client-id.apps.googleusercontent.com',
+      audience: [
+        'test-client-id.apps.googleusercontent.com',
+        'test-android-client-id.apps.googleusercontent.com',
+      ],
     });
   });
 

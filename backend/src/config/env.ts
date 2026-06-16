@@ -20,6 +20,8 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().url('CORS_ORIGIN must be a valid URL'),
   BCRYPT_SALT_ROUNDS: z.coerce.number().int().min(10).max(15).default(12),
   GOOGLE_CLIENT_ID: z.string().min(1).optional(),
+  /** Android OAuth client ID — optional; required for Play Store ID tokens (aud = Android client). */
+  GOOGLE_ANDROID_CLIENT_ID: z.string().min(1).optional(),
   GOOGLE_AI_API_KEY: z.string().min(1).optional(),
   GEMINI_EMBEDDING_MODEL: z.string().default('gemini-embedding-001'),
   GROQ_API_KEY: z.string().min(1).optional(),

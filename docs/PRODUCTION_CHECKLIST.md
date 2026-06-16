@@ -17,7 +17,8 @@ Use this checklist before launching Memora AI to production. Details for each it
 - [ ] `CORS_ORIGIN` set to your web app origin (if applicable)
 - [ ] `GOOGLE_AI_API_KEY` set (embeddings + semantic search)
 - [ ] `GROQ_API_KEY` set ([GROQ_SETUP.md](./GROQ_SETUP.md))
-- [ ] `GOOGLE_CLIENT_ID` set (Google sign-in)
+- [ ] `GOOGLE_CLIENT_ID` set (Google sign-in — Web client, always required)
+- [ ] `GOOGLE_ANDROID_CLIENT_ID` set for Play Store Android ([google-auth-setup.md](./google-auth-setup.md))
 - [ ] `HEALTH_ENDPOINTS_ENABLED=false` in production (use `/api/v1/health/live` for probes)
 - [ ] No `.env` files committed to git
 - [ ] `npm run startup-check` passes against production env
@@ -41,7 +42,8 @@ Use this checklist before launching Memora AI to production. Details for each it
 
 - [ ] `GET /api/v1/health/live` → `{ "status": "ok" }`
 - [ ] Register + login (email/password) works
-- [ ] Google sign-in works (mobile + backend client IDs match)
+- [ ] Google sign-in works (Web client in dev; Android client on EAS/Play builds)
+- [ ] Android OAuth SHA-1 fingerprints registered (debug, EAS, Play App Signing)
 - [ ] Create document → `embeddingStatus` becomes `completed`
 - [ ] Semantic search returns results for embedded documents
 - [ ] RAG chat returns answer with `sources` array
@@ -52,6 +54,7 @@ Use this checklist before launching Memora AI to production. Details for each it
 - [ ] Expo account and EAS project linked (`eas init`)
 - [ ] `EXPO_PUBLIC_API_URL` points to **production** HTTPS API
 - [ ] `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` matches backend `GOOGLE_CLIENT_ID`
+- [ ] `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` matches backend `GOOGLE_ANDROID_CLIENT_ID`
 - [ ] iOS bundle ID `com.memora.mobile` registered in Apple Developer
 - [ ] Android package `com.memora.mobile` registered in Google Play Console
 - [ ] `eas build --profile production` succeeds for target platform(s)

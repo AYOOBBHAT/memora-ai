@@ -20,15 +20,25 @@ function assertGoogleClientIdConfigured(): void {
   }
 }
 
+/** Audiences accepted when verifying Google ID tokens (Web + optional Android client). */
+export function getGoogleIdTokenAudiences(): string[] {
+  const audiences = [env.GOOGLE_CLIENT_ID, env.GOOGLE_ANDROID_CLIENT_ID].filter(
+    (id): id is string => Boolean(id?.trim()),
+  );
+
+  return [...new Set(audiences)];
+}
+
 export async function verifyGoogleIdToken(idToken: string): Promise<GoogleTokenPayload> {
   assertGoogleClientIdConfigured();
 
-  const client = new OAuth2Client(env.GOOGLE_CLIENT_ID);
+  const audiences = getGoogleIdTokenAudiences();
+  const client = new OAuth2Client(audiences[0]);
 
   try {
     const ticket = await client.verifyIdToken({
       idToken,
-      audience: env.GOOGLE_CLIENT_ID,
+      audience: audiences.length === 1 ? audiences[0] : audiences,
     });
     const payload = ticket.getPayload();
 

@@ -16,7 +16,8 @@ npx expo start
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `EXPO_PUBLIC_API_URL` | Yes | Backend API base URL (no trailing slash). Default: `http://localhost:4000` |
-| `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | For Google sign-in | OAuth 2.0 **Web** client ID from Google Cloud Console. Must match backend `GOOGLE_CLIENT_ID`. |
+| `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | For Google sign-in | OAuth 2.0 **Web** client ID. Must match backend `GOOGLE_CLIENT_ID`. |
+| `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` | For Play Store Android | OAuth 2.0 **Android** client ID. Must match backend `GOOGLE_ANDROID_CLIENT_ID`. |
 | `EXPO_PUBLIC_PRIVACY_POLICY_URL` | For Profile legal links | Deployed Privacy Policy URL (e.g. `https://your-domain/privacy`) |
 | `EXPO_PUBLIC_TERMS_OF_SERVICE_URL` | For Profile legal links | Deployed Terms of Service URL (e.g. `https://your-domain/terms`) |
 
@@ -26,15 +27,13 @@ npx expo start
 
 ### Google Sign-In setup
 
-1. In [Google Cloud Console](https://console.cloud.google.com/), create or select a project.
-2. Enable the Google+ / Google Identity APIs if prompted.
-3. Create an **OAuth 2.0 Client ID** of type **Web application**.
-4. Copy the client ID into:
-   - `mobile/.env` → `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`
-   - `backend/.env` → `GOOGLE_CLIENT_ID` (same value)
-5. For Expo Auth Session, add authorized redirect URIs as needed (Expo Go uses the proxy; dev builds use `memora://` scheme from `app.config.ts`).
+See **[docs/google-auth-setup.md](../docs/google-auth-setup.md)** for full Play Store setup (OAuth consent screen, Web + Android clients, SHA-1 fingerprints, EAS secrets).
 
-Google sign-in uses `expo-auth-session` (works in Expo Go). For native Google Sign-In in a custom dev client, consider `@react-native-google-signin/google-signin` instead.
+Quick start:
+
+1. Create **Web** OAuth client → `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` + backend `GOOGLE_CLIENT_ID`
+2. Create **Android** OAuth client (`com.memora.mobile` + SHA-1) → `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` + backend `GOOGLE_ANDROID_CLIENT_ID`
+3. Android client is required for EAS preview APK and Play Store builds; Web-only config still works in Expo Go / dev
 
 ## Auth screens
 

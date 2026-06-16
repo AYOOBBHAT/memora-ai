@@ -17,7 +17,8 @@ File template: `backend/.env.example`
 | `JWT_REFRESH_EXPIRES_IN` | No | `7d` | Refresh token lifetime |
 | `CORS_ORIGIN` | **Yes** | — | Allowed browser origin URL (e.g. `https://app.example.com`) |
 | `BCRYPT_SALT_ROUNDS` | No | `12` | Password hashing cost (10–15) |
-| `GOOGLE_CLIENT_ID` | For Google sign-in | — | OAuth 2.0 Web client ID from Google Cloud Console |
+| `GOOGLE_CLIENT_ID` | For Google sign-in | — | OAuth 2.0 **Web** client ID (always verified). See [google-auth-setup.md](./google-auth-setup.md) |
+| `GOOGLE_ANDROID_CLIENT_ID` | For Play Store Android | — | OAuth 2.0 **Android** client ID; ID tokens from EAS/Play builds use this as `aud` |
 | `GOOGLE_AI_API_KEY` | For embeddings / search | — | Google AI Studio key for Gemini embeddings |
 | `GEMINI_EMBEDDING_MODEL` | No | `gemini-embedding-001` | Embedding model name |
 | `GROQ_API_KEY` | For RAG chat | — | Groq API key for answer generation |
@@ -37,7 +38,8 @@ JWT_ACCESS_SECRET=local-dev-access-secret-min-32-chars!!
 JWT_REFRESH_SECRET=local-dev-refresh-secret-min-32-chars!
 CORS_ORIGIN=http://localhost:3000
 HEALTH_ENDPOINTS_ENABLED=true
-GOOGLE_CLIENT_ID=123456789.apps.googleusercontent.com
+GOOGLE_CLIENT_ID=123456789-web.apps.googleusercontent.com
+GOOGLE_ANDROID_CLIENT_ID=123456789-android.apps.googleusercontent.com
 GOOGLE_AI_API_KEY=AIza...
 GROQ_API_KEY=gsk_...
 ```
@@ -53,6 +55,7 @@ JWT_REFRESH_SECRET=<64-char-random-hex>
 CORS_ORIGIN=https://your-web-app.example.com
 HEALTH_ENDPOINTS_ENABLED=false
 GOOGLE_CLIENT_ID=...
+GOOGLE_ANDROID_CLIENT_ID=...
 GOOGLE_AI_API_KEY=...
 GROQ_API_KEY=...
 ```
@@ -75,6 +78,7 @@ Expo exposes only variables prefixed with `EXPO_PUBLIC_` to the client bundle.
 |----------|----------|---------|-------------|
 | `EXPO_PUBLIC_API_URL` | **Yes** | — | Backend base URL, no trailing slash |
 | `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | For Google sign-in | — | Must match backend `GOOGLE_CLIENT_ID` |
+| `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` | For Play Store Android | — | Must match backend `GOOGLE_ANDROID_CLIENT_ID`. Package `com.memora.mobile` + SHA-1 in Google Cloud |
 | `EXPO_PUBLIC_PRIVACY_POLICY_URL` | For Profile legal links | — | Deployed Privacy Policy URL (e.g. `https://your-domain/privacy`) |
 | `EXPO_PUBLIC_TERMS_OF_SERVICE_URL` | For Profile legal links | — | Deployed Terms of Service URL (e.g. `https://your-domain/terms`) |
 
@@ -84,7 +88,8 @@ Expo exposes only variables prefixed with `EXPO_PUBLIC_` to the client bundle.
 
 ```env
 EXPO_PUBLIC_API_URL=http://localhost:4000
-EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=123456789.apps.googleusercontent.com
+EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=123456789-web.apps.googleusercontent.com
+EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID=123456789-android.apps.googleusercontent.com
 EXPO_PUBLIC_PRIVACY_POLICY_URL=https://your-domain/privacy
 EXPO_PUBLIC_TERMS_OF_SERVICE_URL=https://your-domain/terms
 ```
@@ -107,7 +112,8 @@ Set in `mobile/eas.json` profile `env` or EAS Secrets:
 
 ```env
 EXPO_PUBLIC_API_URL=https://api.yourdomain.com
-EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=123456789.apps.googleusercontent.com
+EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=123456789-web.apps.googleusercontent.com
+EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID=123456789-android.apps.googleusercontent.com
 EXPO_PUBLIC_PRIVACY_POLICY_URL=https://your-domain/privacy
 EXPO_PUBLIC_TERMS_OF_SERVICE_URL=https://your-domain/terms
 ```
@@ -117,7 +123,8 @@ EXPO_PUBLIC_TERMS_OF_SERVICE_URL=https://your-domain/terms
 ```bash
 cd mobile
 eas secret:create --name EXPO_PUBLIC_API_URL --value https://api.yourdomain.com --scope project
-eas secret:create --name EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID --value <client-id> --scope project
+eas secret:create --name EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID --value <web-client-id> --scope project
+eas secret:create --name EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID --value <android-client-id> --scope project
 eas secret:create --name EXPO_PUBLIC_PRIVACY_POLICY_URL --value https://your-domain/privacy --scope project
 eas secret:create --name EXPO_PUBLIC_TERMS_OF_SERVICE_URL --value https://your-domain/terms --scope project
 ```

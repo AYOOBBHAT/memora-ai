@@ -80,7 +80,14 @@ async function main(): Promise<void> {
   if (!env.GOOGLE_CLIENT_ID) {
     logWarn('GOOGLE_CLIENT_ID not set — Google sign-in disabled');
   } else {
-    logOk('GOOGLE_CLIENT_ID configured');
+    logOk('GOOGLE_CLIENT_ID configured (Web client — required)');
+    if (!env.GOOGLE_ANDROID_CLIENT_ID) {
+      logWarn(
+        'GOOGLE_ANDROID_CLIENT_ID not set — Play Store / EAS Android builds may fail Google sign-in until configured (see docs/google-auth-setup.md)',
+      );
+    } else {
+      logOk('GOOGLE_ANDROID_CLIENT_ID configured (Android client — Play Store ready)');
+    }
   }
 
   if (env.HEALTH_ENDPOINTS_ENABLED) {

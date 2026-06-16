@@ -13,6 +13,7 @@ export function isGoogleSignInConfigured(): boolean {
 export function useGoogleIdTokenRequest() {
   return Google.useIdTokenAuthRequest({
     clientId: env.googleWebClientId || undefined,
+    androidClientId: env.googleAndroidClientId || undefined,
   });
 }
 
