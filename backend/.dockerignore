@@ -16,8 +16,6 @@ coverage
 **/*.spec.ts
 vitest.config.*
 eslint.config.*
-tsconfig.json
-tsconfig.build.json
 scripts
 Dockerfile
 .dockerignore
