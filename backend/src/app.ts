@@ -18,6 +18,8 @@ const logger = pino({ name: 'http' });
 export function createApp(): Application {
   const app = express();
 
+  app.set('trust proxy', 1);
+
   app.use(helmet());
   app.use(cors(createCorsMiddlewareOptions(env.CORS_ORIGINS)));
   app.use(compression());
