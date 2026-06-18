@@ -100,6 +100,26 @@
   text-align: center;
 }
 
+.footerNav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 16px;
+  margin-bottom: 12px;
+}
+
+.footerLink {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #475569;
+  text-decoration: none;
+}
+
+.footerLink:hover {
+  color: #4f46e5;
+  text-decoration: underline;
+}
+
 .footer p {
   margin: 0;
   font-size: 0.8125rem;

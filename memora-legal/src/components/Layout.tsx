@@ -7,6 +7,12 @@ interface LayoutProps {
   children?: ReactNode;
 }
 
+const footerLinks = [
+  { to: '/privacy', label: 'Privacy Policy' },
+  { to: '/terms', label: 'Terms of Service' },
+  { to: '/account-deletion', label: 'Account Deletion' },
+] as const;
+
 export function Layout({ children }: LayoutProps) {
   return (
     <div className={styles.page}>
@@ -22,22 +28,17 @@ export function Layout({ children }: LayoutProps) {
             </div>
           </div>
           <nav className={styles.nav} aria-label="Legal pages">
-            <NavLink
-              to="/privacy"
-              className={({ isActive }) =>
-                isActive ? `${styles.navLink} ${styles.navLinkActive}` : styles.navLink
-              }
-            >
-              Privacy Policy
-            </NavLink>
-            <NavLink
-              to="/terms"
-              className={({ isActive }) =>
-                isActive ? `${styles.navLink} ${styles.navLinkActive}` : styles.navLink
-              }
-            >
-              Terms of Service
-            </NavLink>
+            {footerLinks.map(({ to, label }) => (
+              <NavLink
+                key={to}
+                to={to}
+                className={({ isActive }) =>
+                  isActive ? `${styles.navLink} ${styles.navLinkActive}` : styles.navLink
+                }
+              >
+                {label}
+              </NavLink>
+            ))}
           </nav>
         </div>
       </header>
@@ -45,6 +46,13 @@ export function Layout({ children }: LayoutProps) {
       <main className={styles.main}>{children ?? <Outlet />}</main>
 
       <footer className={styles.footer}>
+        <nav className={styles.footerNav} aria-label="Legal footer">
+          {footerLinks.map(({ to, label }) => (
+            <NavLink key={to} to={to} className={styles.footerLink}>
+              {label}
+            </NavLink>
+          ))}
+        </nav>
         <p>&copy; {new Date().getFullYear()} Memora AI. All rights reserved.</p>
       </footer>
     </div>
