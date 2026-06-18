@@ -1,5 +1,8 @@
 import { ExpoConfig, ConfigContext } from 'expo/config';
 
+const APP_LOGO = './assets/new_memora_app_logo.png';
+const SPLASH_BACKGROUND = '#0F172A';
+
 const GOOGLE_CLIENT_ID_SUFFIX = '.apps.googleusercontent.com';
 
 /** Inline for Expo config — Node cannot require TS files under src/ at config time. */
@@ -42,7 +45,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 
   orientation: 'portrait',
 
-  icon: './assets/icon.png',
+  icon: APP_LOGO,
 
   userInterfaceStyle: 'automatic',
 
@@ -66,13 +69,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 
     adaptiveIcon: {
 
-      backgroundColor: '#E6F4FE',
+      backgroundColor: SPLASH_BACKGROUND,
 
-      foregroundImage: './assets/android-icon-foreground.png',
-
-      backgroundImage: './assets/android-icon-background.png',
-
-      monochromeImage: './assets/android-icon-monochrome.png',
+      foregroundImage: APP_LOGO,
 
     },
 
@@ -82,7 +81,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 
   web: {
 
-    favicon: './assets/favicon.png',
+    favicon: APP_LOGO,
 
   },
 
