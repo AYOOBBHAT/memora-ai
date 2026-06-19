@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { CollectionIconDisplay } from '../../collections/components/CollectionIconDisplay';
 import { useCollections } from '../../../hooks/queries/useCollections';
 import { useTheme } from '../../../theme/ThemeProvider';
 
@@ -74,7 +75,7 @@ export function CollectionPicker({ selectedCollectionId, onSelect }: CollectionP
                 },
               ]}
             >
-              <Text style={styles.collectionIcon}>{collection.icon ?? '📁'}</Text>
+              <CollectionIconDisplay icon={collection.icon} size={18} style={styles.collectionIcon} />
               <Text
                 style={[
                   styles.collectionOptionText,
@@ -112,7 +113,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   collectionIcon: {
-    fontSize: 18,
+    width: 22,
+    alignItems: 'center',
   },
   collectionOptionText: {
     flex: 1,

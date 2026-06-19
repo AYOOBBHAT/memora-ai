@@ -1,7 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import type { ChatCitationSource, DocumentSourceType } from '../../../api/types';
+import type { ChatCitationSource } from '../../../api/types';
+import { SourceBadge } from '../../../components/ui/SourceBadge';
+import { useCollections } from '../../../hooks/queries/useCollections';
+import { useDocuments } from '../../../hooks/queries/useDocuments';
+import { getDocumentVisual } from '../../../lib/documentVisuals';
 import { useTheme } from '../../../theme/ThemeProvider';
 
 interface SourceCardProps {
@@ -9,34 +13,49 @@ interface SourceCardProps {
   onPress: () => void;
 }
 
-const SOURCE_LABELS: Record<DocumentSourceType, string> = {
-  text: 'Text',
-  url: 'URL',
-  pdf: 'PDF',
-  youtube: 'YouTube',
-  upload: 'Upload',
-};
-
 function formatScore(score: number): string {
   return `${Math.round(score * 100)}% match`;
 }
 
 export function SourceCard({ source, onPress }: SourceCardProps) {
   const { theme } = useTheme();
+  const { data: collections = [] } = useCollections();
+  const { data: documents = [] } = useDocuments();
+  const visual = getDocumentVisual(source.sourceType);
+
+  const document = documents.find((item) => item.id === source.documentId);
+  const collectionName =
+    collections.find((collection) => collection.id === document?.collectionId)?.name ??
+    undefined;
 
   return (
     <Pressable
+      accessibilityLabel={`Open source ${source.title}`}
       accessibilityRole="button"
       onPress={onPress}
       style={({ pressed }) => [
         styles.card,
+        theme.elevation.soft,
         {
-          backgroundColor: theme.colors.surface,
-          borderColor: theme.colors.border,
-          opacity: pressed ? 0.85 : 1,
+          backgroundColor: theme.colors.surfaceElevated,
+          borderColor: `${theme.colors.border}AA`,
+          borderRadius: theme.radii.lg,
+          opacity: pressed ? 0.9 : 1,
+          transform: [{ scale: pressed ? 0.99 : 1 }],
         },
       ]}
     >
+      <View
+        style={[
+          styles.iconWrap,
+          {
+            backgroundColor: visual.background,
+            borderRadius: theme.radii.md,
+          },
+        ]}
+      >
+        <Ionicons color={visual.accent} name={visual.icon} size={18} />
+      </View>
       <View style={styles.content}>
         <Text
           numberOfLines={2}
@@ -45,34 +64,28 @@ export function SourceCard({ source, onPress }: SourceCardProps) {
             {
               color: theme.colors.text,
               fontSize: theme.typography.fontSizes.sm,
-              fontWeight: theme.typography.fontWeights.medium,
+              fontWeight: theme.typography.fontWeights.semibold,
             },
           ]}
         >
           {source.title}
         </Text>
         <View style={styles.meta}>
-          <View
-            style={[
-              styles.badge,
-              {
-                backgroundColor: theme.colors.surfaceSecondary,
-                borderColor: theme.colors.border,
-              },
-            ]}
-          >
+          <SourceBadge sourceType={source.sourceType} />
+          {collectionName ? (
             <Text
+              numberOfLines={1}
               style={[
-                styles.badgeText,
+                styles.collection,
                 {
                   color: theme.colors.textSecondary,
                   fontSize: theme.typography.fontSizes.xs,
                 },
               ]}
             >
-              {SOURCE_LABELS[source.sourceType]}
+              {collectionName}
             </Text>
-          </View>
+          ) : null}
           <Text
             style={[
               styles.score,
@@ -94,34 +107,35 @@ export function SourceCard({ source, onPress }: SourceCardProps) {
 const styles = StyleSheet.create({
   card: {
     alignItems: 'center',
-    borderRadius: 10,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
-    gap: 8,
+    gap: 10,
+    minHeight: 52,
     paddingHorizontal: 12,
     paddingVertical: 10,
+  },
+  iconWrap: {
+    alignItems: 'center',
+    height: 40,
+    justifyContent: 'center',
+    width: 40,
   },
   content: {
     flex: 1,
     gap: 6,
   },
-  title: {},
+  title: {
+    lineHeight: 18,
+  },
   meta: {
     alignItems: 'center',
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
   },
-  badge: {
-    alignSelf: 'flex-start',
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  badgeText: {
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
+  collection: {
+    flexShrink: 1,
+    maxWidth: '46%',
   },
   score: {},
 });

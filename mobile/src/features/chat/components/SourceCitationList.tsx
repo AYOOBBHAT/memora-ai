@@ -25,7 +25,7 @@ export function SourceCitationList({ sources, onSourcePress }: SourceCitationLis
           {
             color: theme.colors.textSecondary,
             fontSize: theme.typography.fontSizes.xs,
-            fontWeight: theme.typography.fontWeights.medium,
+            fontWeight: theme.typography.fontWeights.semibold,
           },
         ]}
       >
@@ -45,7 +45,7 @@ export function SourceCitationList({ sources, onSourcePress }: SourceCitationLis
 const styles = StyleSheet.create({
   container: {
     gap: 8,
-    marginTop: 10,
+    marginTop: 12,
   },
   label: {
     textTransform: 'uppercase',

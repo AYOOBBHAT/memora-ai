@@ -33,5 +33,9 @@ export const env = {
 
   termsOfServiceUrl: optionalEnv(process.env.EXPO_PUBLIC_TERMS_OF_SERVICE_URL),
 
+  playStoreUrl: optionalEnv(process.env.EXPO_PUBLIC_PLAY_STORE_URL),
+
+  supportEmail: optionalEnv(process.env.EXPO_PUBLIC_SUPPORT_EMAIL) || 'dbmemora@gmail.com',
+
 } as const;
 

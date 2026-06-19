@@ -16,13 +16,13 @@ interface ChatInputProps {
 
 export const ChatInput = forwardRef<TextInputType, ChatInputProps>(function ChatInput(
   {
-  value,
-  onChangeText,
-  onSend,
-  disabled = false,
-  placeholder = 'Ask a question…',
-  onFocus,
-  onBlur,
+    value,
+    onChangeText,
+    onSend,
+    disabled = false,
+    placeholder = 'Ask Memora anything...',
+    onFocus,
+    onBlur,
   },
   ref,
 ) {
@@ -34,6 +34,7 @@ export const ChatInput = forwardRef<TextInputType, ChatInputProps>(function Chat
     <View
       style={[
         styles.container,
+        theme.elevation.soft,
         {
           backgroundColor: theme.colors.surface,
           borderTopColor: theme.colors.border,
@@ -42,6 +43,7 @@ export const ChatInput = forwardRef<TextInputType, ChatInputProps>(function Chat
     >
       <TextInput
         ref={ref}
+        accessibilityLabel="Chat message input"
         editable={!disabled}
         multiline
         onBlur={onBlur}
@@ -63,19 +65,22 @@ export const ChatInput = forwardRef<TextInputType, ChatInputProps>(function Chat
       <Pressable
         accessibilityLabel="Send message"
         accessibilityRole="button"
+        accessibilityState={{ disabled: !canSend }}
         disabled={!canSend}
         onPress={onSend}
         style={({ pressed }) => [
           styles.sendButton,
+          theme.elevation.soft,
           {
             backgroundColor: canSend ? theme.colors.primary : theme.colors.surfaceSecondary,
-            opacity: pressed && canSend ? 0.85 : 1,
+            opacity: pressed && canSend ? 0.88 : 1,
+            transform: [{ scale: pressed && canSend ? 0.94 : 1 }],
           },
         ]}
       >
         <Ionicons
           color={canSend ? theme.colors.primaryText : theme.colors.textSecondary}
-          name="send"
+          name="arrow-up"
           size={20}
         />
       </Pressable>
@@ -90,24 +95,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
     paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 12,
+    paddingTop: 12,
+    paddingBottom: 14,
   },
   input: {
-    borderRadius: 22,
+    borderRadius: 24,
     borderWidth: 1,
     flex: 1,
     maxHeight: 120,
-    minHeight: 46,
+    minHeight: 48,
     paddingHorizontal: 18,
-    paddingTop: 11,
-    paddingBottom: 11,
+    paddingTop: 12,
+    paddingBottom: 12,
   },
   sendButton: {
     alignItems: 'center',
-    borderRadius: 23,
-    height: 46,
+    borderRadius: 24,
+    height: 48,
     justifyContent: 'center',
-    width: 46,
+    width: 48,
   },
 });

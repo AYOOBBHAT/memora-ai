@@ -16,22 +16,34 @@ export function CollectionScopeBadge({ collection, onClear }: CollectionScopeBad
   const accentColor = collection.color ?? DEFAULT_COLLECTION_COLOR;
 
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: theme.colors.surface,
-          borderColor: theme.colors.border,
-        },
-      ]}
-    >
-      <View style={[styles.accent, { backgroundColor: accentColor }]} />
-      <View style={styles.content}>
-        <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Chatting with</Text>
-        <View style={styles.nameRow}>
-          {collection.icon ? (
-            <CollectionIconDisplay icon={collection.icon} size={16} style={styles.nameIcon} />
-          ) : null}
+    <View style={[styles.wrapper, { backgroundColor: theme.colors.background }]}>
+      <View
+        style={[
+          styles.chip,
+          {
+            backgroundColor: `${accentColor}14`,
+            borderColor: `${accentColor}44`,
+            borderRadius: theme.radii.full,
+          },
+        ]}
+      >
+        {collection.icon ? (
+          <CollectionIconDisplay color={accentColor} icon={collection.icon} size={16} />
+        ) : (
+          <Ionicons color={accentColor} name="folder-outline" size={16} />
+        )}
+        <View style={styles.textWrap}>
+          <Text
+            style={[
+              styles.label,
+              {
+                color: theme.colors.textSecondary,
+                fontSize: theme.typography.fontSizes.xs,
+              },
+            ]}
+          >
+            Chatting with
+          </Text>
           <Text
             numberOfLines={1}
             style={[
@@ -46,54 +58,49 @@ export function CollectionScopeBadge({ collection, onClear }: CollectionScopeBad
             {collection.name}
           </Text>
         </View>
+        <Pressable
+          accessibilityLabel="Clear collection scope"
+          accessibilityRole="button"
+          hitSlop={8}
+          onPress={onClear}
+          style={({ pressed }) => [styles.clearButton, { opacity: pressed ? 0.6 : 1 }]}
+        >
+          <Ionicons color={theme.colors.textSecondary} name="close" size={18} />
+        </Pressable>
       </View>
-      <Pressable
-        accessibilityLabel="Clear collection scope"
-        accessibilityRole="button"
-        hitSlop={8}
-        onPress={onClear}
-        style={({ pressed }) => [styles.clearButton, { opacity: pressed ? 0.6 : 1 }]}
-      >
-        <Ionicons color={theme.colors.textSecondary} name="close-circle" size={22} />
-      </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    flexDirection: 'row',
+  wrapper: {
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingTop: 8,
+    paddingBottom: 4,
   },
-  accent: {
-    borderRadius: 999,
-    height: 28,
-    marginRight: 10,
-    width: 4,
+  chip: {
+    alignItems: 'center',
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 10,
+    minHeight: 44,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
   },
-  content: {
+  textWrap: {
     flex: 1,
-    gap: 2,
+    gap: 1,
   },
   label: {
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
+    letterSpacing: 0.2,
   },
   name: {
-    flex: 1,
+    lineHeight: 18,
   },
-  nameRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 6,
-  },
-  nameIcon: {},
   clearButton: {
-    paddingLeft: 8,
+    alignItems: 'center',
+    height: 28,
+    justifyContent: 'center',
+    width: 28,
   },
 });

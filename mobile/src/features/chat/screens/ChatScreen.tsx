@@ -23,6 +23,8 @@ import type { ChatCitationSource, ChatCollectionScope } from '../../../api/types
 import { ChatInput } from '../components/ChatInput';
 import { ChatMessageBubble } from '../components/ChatMessageBubble';
 import { CollectionScopeBadge } from '../components/CollectionScopeBadge';
+import { TypingIndicator } from '../components/TypingIndicator';
+import { CollectionIconDisplay } from '../../collections/components/CollectionIconDisplay';
 import { ErrorBanner } from '../../collections/components/ErrorBanner';
 import { useSendChat } from '../../../hooks/mutations/useSendChat';
 import { useConversation } from '../../../hooks/queries/useConversation';
@@ -46,12 +48,15 @@ const EMPTY_TRANSITION_MS = 200;
 
 const DEFAULT_CHAT_SUGGESTIONS = [
   'Summarize my notes',
-  'Explain my PDFs',
-  'What did I save about AI?',
+  'What PDFs have I uploaded?',
+  "Explain today's research",
   'Search my knowledge',
 ];
 
-function getChatSuggestions(documents: SafeDocument[]): string[] {
+function getChatSuggestions(
+  documents: SafeDocument[],
+  collections: { name: string }[],
+): string[] {
   const suggestions: string[] = [];
   const hasNotes = documents.some((doc) => doc.sourceType === 'text');
   const hasPdfs = documents.some(
@@ -63,16 +68,28 @@ function getChatSuggestions(documents: SafeDocument[]): string[] {
   }
 
   if (hasPdfs) {
-    suggestions.push('Explain my PDFs');
+    suggestions.push('What PDFs have I uploaded?');
   }
 
-  const topicMatch = documents
-    .flatMap((doc) => [doc.title, ...(doc.metadata?.tags as string[] | undefined ?? [])])
-    .join(' ')
-    .match(/\b(AWS|React|Python|JavaScript|TypeScript|AI|ML)\b/i);
+  const today = new Date();
+  const hasTodayDocs = documents.some((doc) => {
+    const updated = new Date(doc.updatedAt);
+    return (
+      updated.getFullYear() === today.getFullYear() &&
+      updated.getMonth() === today.getMonth() &&
+      updated.getDate() === today.getDate()
+    );
+  });
 
-  if (topicMatch) {
-    suggestions.push(`What did I save about ${topicMatch[0]}?`);
+  if (hasTodayDocs) {
+    suggestions.push("Explain today's research");
+  }
+
+  const linkedInCollection = collections.find((collection) =>
+    /linkedin/i.test(collection.name),
+  );
+  if (linkedInCollection) {
+    suggestions.push('Search my LinkedIn collection');
   }
 
   for (const fallback of DEFAULT_CHAT_SUGGESTIONS) {
@@ -125,16 +142,22 @@ export function ChatScreen({ navigation, route }: Props) {
   const sendChat = useSendChat();
 
   const suggestedQuestions = useMemo(
-    () => getChatSuggestions(documents),
-    [documents],
+    () => getChatSuggestions(documents, collections),
+    [collections, documents],
   );
 
+  const isConversationActive = messages.length > 0 || sendChat.isPending;
+  const showEmptyOverlay = messages.length === 0;
+
   const showHero =
-    messages.length === 0 &&
+    showEmptyOverlay &&
     !isKeyboardVisible &&
     !isInputFocused &&
     input.length === 0;
-  const showSuggestions = messages.length === 0 && !showHero;
+  const showSuggestions = showEmptyOverlay && !showHero;
+
+  const [emptyOverlayMounted, setEmptyOverlayMounted] = useState(showEmptyOverlay);
+  const emptyOverlayOpacity = useRef(new Animated.Value(showEmptyOverlay ? 1 : 0)).current;
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -154,6 +177,36 @@ export function ChatScreen({ navigation, route }: Props) {
   }, []);
 
   useEffect(() => {
+    if (showEmptyOverlay) {
+      setEmptyOverlayMounted(true);
+      Animated.timing(emptyOverlayOpacity, {
+        toValue: 1,
+        duration: EMPTY_TRANSITION_MS,
+        useNativeDriver: true,
+      }).start();
+      return;
+    }
+
+    if (!emptyOverlayMounted) {
+      return;
+    }
+
+    Animated.timing(emptyOverlayOpacity, {
+      toValue: 0,
+      duration: EMPTY_TRANSITION_MS,
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) {
+        setEmptyOverlayMounted(false);
+      }
+    });
+  }, [emptyOverlayMounted, emptyOverlayOpacity, showEmptyOverlay]);
+
+  useEffect(() => {
+    if (!showEmptyOverlay) {
+      return;
+    }
+
     Animated.parallel([
       Animated.timing(heroOpacity, {
         toValue: showHero ? 1 : 0,
@@ -176,7 +229,7 @@ export function ChatScreen({ navigation, route }: Props) {
         useNativeDriver: true,
       }),
     ]).start();
-  }, [heroOpacity, heroScale, heroTranslateY, showHero, showSuggestions, suggestionsOpacity]);
+  }, [heroOpacity, heroScale, heroTranslateY, showEmptyOverlay, showHero, showSuggestions, suggestionsOpacity]);
 
   useEffect(() => {
     if (!resumeConversationId || !conversationDetail) {
@@ -245,18 +298,33 @@ export function ChatScreen({ navigation, route }: Props) {
     startNewChat,
   ]);
 
-  const scrollToBottom = useCallback(() => {
-    if (messages.length === 0) {
-      return;
-    }
-    requestAnimationFrame(() => {
-      flatListRef.current?.scrollToEnd({ animated: true });
-    });
-  }, [messages.length]);
+  const scrollToBottom = useCallback(
+    (animated = true) => {
+      if (messages.length === 0 && !sendChat.isPending) {
+        return;
+      }
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          flatListRef.current?.scrollToEnd({ animated });
+        });
+      });
+    },
+    [messages.length, sendChat.isPending],
+  );
 
   useEffect(() => {
     scrollToBottom();
   }, [messages, sendChat.isPending, scrollToBottom]);
+
+  useEffect(() => {
+    if (!isKeyboardVisible || messages.length === 0) {
+      return;
+    }
+
+    const timer = setTimeout(() => scrollToBottom(), Platform.OS === 'ios' ? 100 : 150);
+    return () => clearTimeout(timer);
+  }, [isKeyboardVisible, messages.length, scrollToBottom]);
 
   const handleStartNewChat = useCallback(() => {
     Alert.alert('Start new chat', 'Clear the current conversation and begin a new one?', [
@@ -285,6 +353,9 @@ export function ChatScreen({ navigation, route }: Props) {
       headerTitleStyle: {
         fontSize: theme.typography.fontSizes.md,
         fontWeight: theme.typography.fontWeights.semibold,
+      },
+      headerStyle: {
+        backgroundColor: theme.colors.surface,
       },
       headerLeft: () => (
         <Pressable
@@ -509,131 +580,6 @@ export function ChatScreen({ navigation, route }: Props) {
     inputRef.current?.focus();
   }, []);
 
-  const listEmptyComponent = useMemo(
-    () => (
-      <View style={styles.emptyWrapper}>
-        <Animated.View
-          pointerEvents={showHero ? 'auto' : 'none'}
-          style={[
-            styles.emptyHeroContainer,
-            {
-              opacity: heroOpacity,
-              transform: [{ translateY: heroTranslateY }, { scale: heroScale }],
-            },
-          ]}
-        >
-          <View style={styles.emptyState}>
-            <View
-              style={[
-                styles.emptyIconWrap,
-                {
-                  backgroundColor: `${theme.colors.primary}18`,
-                  borderRadius: theme.radii.xl,
-                },
-              ]}
-            >
-              <Ionicons color={theme.colors.primary} name="sparkles" size={28} />
-            </View>
-            <Text
-              style={[
-                styles.emptyTitle,
-                {
-                  color: theme.colors.text,
-                  fontSize: theme.typography.fontSizes.lg,
-                  fontWeight: theme.typography.fontWeights.semibold,
-                },
-              ]}
-            >
-              Ask about your saved knowledge
-            </Text>
-            <Text
-              style={[
-                styles.emptySubtitle,
-                {
-                  color: theme.colors.textSecondary,
-                  fontSize: theme.typography.fontSizes.sm,
-                },
-              ]}
-            >
-              Memora searches your notes, PDFs, websites and YouTube, then cites the sources it
-              uses.
-            </Text>
-          </View>
-        </Animated.View>
-
-        <Animated.View
-          pointerEvents={showSuggestions ? 'auto' : 'none'}
-          style={[styles.suggestionsContainer, { opacity: suggestionsOpacity }]}
-        >
-          <Text
-            style={[
-              styles.suggestionsLabel,
-              {
-                color: theme.colors.textSecondary,
-                fontSize: theme.typography.fontSizes.sm,
-                fontWeight: theme.typography.fontWeights.medium,
-              },
-            ]}
-          >
-            Suggested Questions
-          </Text>
-          <View style={styles.suggestionChips}>
-            {suggestedQuestions.map((suggestion) => (
-              <Pressable
-                key={suggestion}
-                accessibilityRole="button"
-                onPress={() => handleSuggestionPress(suggestion)}
-                style={({ pressed }) => [
-                  styles.suggestionChip,
-                  {
-                    backgroundColor: theme.colors.surfaceElevated,
-                    borderColor: `${theme.colors.border}CC`,
-                    borderRadius: theme.radii.full,
-                    opacity: pressed ? 0.85 : 1,
-                  },
-                ]}
-              >
-                <Text
-                  numberOfLines={1}
-                  style={[
-                    styles.suggestionChipText,
-                    {
-                      color: theme.colors.text,
-                      fontSize: theme.typography.fontSizes.sm,
-                    },
-                  ]}
-                >
-                  {suggestion}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </Animated.View>
-      </View>
-    ),
-    [
-      handleSuggestionPress,
-      heroOpacity,
-      heroScale,
-      heroTranslateY,
-      showHero,
-      showSuggestions,
-      suggestedQuestions,
-      suggestionsOpacity,
-      theme.colors.border,
-      theme.colors.primary,
-      theme.colors.surfaceElevated,
-      theme.colors.text,
-      theme.colors.textSecondary,
-      theme.radii.full,
-      theme.radii.xl,
-      theme.typography.fontSizes.lg,
-      theme.typography.fontSizes.sm,
-      theme.typography.fontWeights.medium,
-      theme.typography.fontWeights.semibold,
-    ],
-  );
-
   const collectionFilter =
     !scopedCollection && collections.length > 0 ? (
       <View
@@ -666,19 +612,27 @@ export function ChatScreen({ navigation, route }: Props) {
                   },
                 ]}
               >
-                <Text
-                  numberOfLines={1}
-                  style={[
-                    styles.filterChipText,
-                    {
-                      color: selected ? theme.colors.primaryText : theme.colors.text,
-                      fontSize: theme.typography.fontSizes.sm,
-                    },
-                  ]}
-                >
-                  {collection.icon ? `${collection.icon} ` : ''}
-                  {collection.name}
-                </Text>
+                <View style={styles.filterChipContent}>
+                  {collection.icon ? (
+                    <CollectionIconDisplay
+                      color={selected ? theme.colors.primaryText : theme.colors.text}
+                      icon={collection.icon}
+                      size={14}
+                    />
+                  ) : null}
+                  <Text
+                    numberOfLines={1}
+                    style={[
+                      styles.filterChipText,
+                      {
+                        color: selected ? theme.colors.primaryText : theme.colors.text,
+                        fontSize: theme.typography.fontSizes.sm,
+                      },
+                    ]}
+                  >
+                    {collection.name}
+                  </Text>
+                </View>
               </Pressable>
             );
           })}
@@ -724,48 +678,158 @@ export function ChatScreen({ navigation, route }: Props) {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
         style={styles.flex}
       >
-        <FlatList
-          ref={flatListRef}
-          contentContainerStyle={[
-            styles.listContent,
-            messages.length === 0 ? styles.listContentEmpty : undefined,
-          ]}
-          data={messages}
-          keyExtractor={keyExtractor}
-          ListEmptyComponent={listEmptyComponent}
-          ListFooterComponent={
-            sendChat.isPending ? (
-              <View style={styles.loadingRow}>
-                <View
-                  style={[
-                    styles.loadingBubble,
-                    theme.elevation.soft,
-                    {
-                      backgroundColor: theme.colors.surfaceElevated,
-                      borderColor: `${theme.colors.primary}33`,
-                    },
-                  ]}
-                >
-                  <ActivityIndicator color={theme.colors.primary} size="small" />
-                  <Text
+        <View style={styles.messageArea}>
+          <FlatList
+            ref={flatListRef}
+            contentContainerStyle={[
+              styles.listContent,
+              isConversationActive ? styles.listContentActive : styles.listContentIdle,
+            ]}
+            data={messages}
+            keyboardDismissMode="interactive"
+            keyboardShouldPersistTaps="handled"
+            keyExtractor={keyExtractor}
+            ListFooterComponent={
+              sendChat.isPending ? (
+                <View style={styles.loadingRow}>
+                  <View style={styles.assistantTypingRow}>
+                    <View
+                      style={[
+                        styles.typingAvatar,
+                        {
+                          backgroundColor: `${theme.colors.primary}18`,
+                          borderRadius: theme.radii.full,
+                        },
+                      ]}
+                    >
+                      <Ionicons color={theme.colors.primary} name="sparkles" size={14} />
+                    </View>
+                    <View
+                      style={[
+                        styles.loadingBubble,
+                        theme.elevation.soft,
+                        {
+                          backgroundColor: theme.colors.surfaceElevated,
+                          borderColor: `${theme.colors.primary}33`,
+                        },
+                      ]}
+                    >
+                      <TypingIndicator />
+                    </View>
+                  </View>
+                </View>
+              ) : null
+            }
+            onContentSizeChange={() => scrollToBottom(false)}
+            renderItem={renderMessage}
+            style={styles.flex}
+          />
+
+          {emptyOverlayMounted ? (
+            <Animated.View
+              pointerEvents={showEmptyOverlay ? 'box-none' : 'none'}
+              style={[styles.emptyOverlay, { opacity: emptyOverlayOpacity }]}
+            >
+              <Animated.View
+                pointerEvents={showHero ? 'auto' : 'none'}
+                style={[
+                  styles.emptyHeroContainer,
+                  {
+                    opacity: heroOpacity,
+                    transform: [{ translateY: heroTranslateY }, { scale: heroScale }],
+                  },
+                ]}
+              >
+                <View style={styles.emptyState}>
+                  <View
                     style={[
-                      styles.loadingText,
+                      styles.emptyIconWrap,
                       {
-                        color: theme.colors.textSecondary,
-                        fontSize: theme.typography.fontSizes.sm,
-                        fontWeight: theme.typography.fontWeights.medium,
+                        backgroundColor: `${theme.colors.primary}18`,
+                        borderRadius: theme.radii.xl,
                       },
                     ]}
                   >
-                    Memora is thinking…
+                    <Ionicons color={theme.colors.primary} name="sparkles" size={28} />
+                  </View>
+                  <Text
+                    style={[
+                      styles.emptyTitle,
+                      {
+                        color: theme.colors.text,
+                        fontSize: theme.typography.fontSizes.lg,
+                        fontWeight: theme.typography.fontWeights.semibold,
+                      },
+                    ]}
+                  >
+                    Ask questions about your saved knowledge
+                  </Text>
+                  <Text
+                    style={[
+                      styles.emptySubtitle,
+                      {
+                        color: theme.colors.textSecondary,
+                        fontSize: theme.typography.fontSizes.sm,
+                      },
+                    ]}
+                  >
+                    Memora searches your notes, PDFs, websites and YouTube to generate answers
+                    with citations.
                   </Text>
                 </View>
-              </View>
-            ) : null
-          }
-          onContentSizeChange={scrollToBottom}
-          renderItem={renderMessage}
-        />
+              </Animated.View>
+
+              <Animated.View
+                pointerEvents={showSuggestions ? 'auto' : 'none'}
+                style={[styles.suggestionsContainer, { opacity: suggestionsOpacity }]}
+              >
+                <Text
+                  style={[
+                    styles.suggestionsLabel,
+                    {
+                      color: theme.colors.textSecondary,
+                      fontSize: theme.typography.fontSizes.sm,
+                      fontWeight: theme.typography.fontWeights.medium,
+                    },
+                  ]}
+                >
+                  Suggested Questions
+                </Text>
+                <View style={styles.suggestionChips}>
+                  {suggestedQuestions.map((suggestion) => (
+                    <Pressable
+                      key={suggestion}
+                      accessibilityRole="button"
+                      onPress={() => handleSuggestionPress(suggestion)}
+                      style={({ pressed }) => [
+                        styles.suggestionChip,
+                        {
+                          backgroundColor: theme.colors.surfaceElevated,
+                          borderColor: `${theme.colors.border}CC`,
+                          borderRadius: theme.radii.full,
+                          opacity: pressed ? 0.85 : 1,
+                        },
+                      ]}
+                    >
+                      <Text
+                        numberOfLines={1}
+                        style={[
+                          styles.suggestionChipText,
+                          {
+                            color: theme.colors.text,
+                            fontSize: theme.typography.fontSizes.sm,
+                          },
+                        ]}
+                      >
+                        {suggestion}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </Animated.View>
+            </Animated.View>
+          ) : null}
+        </View>
         <ChatInput
           ref={inputRef}
           disabled={sendChat.isPending || offlineBanner}
@@ -773,7 +837,7 @@ export function ChatScreen({ navigation, route }: Props) {
           onChangeText={setInput}
           onFocus={() => setIsInputFocused(true)}
           onSend={handleSend}
-          placeholder="Ask anything about your knowledge..."
+          placeholder="Ask Memora anything..."
           value={input}
         />
       </KeyboardAvoidingView>
@@ -795,22 +859,27 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1,
   },
+  messageArea: {
+    flex: 1,
+    position: 'relative',
+  },
   offlineBanner: {
     paddingHorizontal: 16,
     paddingTop: 8,
   },
   listContent: {
-    flexGrow: 1,
-    paddingTop: 20,
+    paddingTop: 16,
     paddingBottom: 12,
   },
-  listContentEmpty: {
-    flex: 1,
-    paddingBottom: 8,
+  listContentIdle: {
+    flexGrow: 1,
   },
-  emptyWrapper: {
-    flex: 1,
-    position: 'relative',
+  listContentActive: {
+    flexGrow: 1,
+    paddingTop: 12,
+  },
+  emptyOverlay: {
+    ...StyleSheet.absoluteFill,
   },
   emptyHeroContainer: {
     alignItems: 'center',
@@ -862,24 +931,30 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   loadingRow: {
-    alignItems: 'flex-start',
     paddingHorizontal: 16,
     paddingBottom: 16,
     paddingTop: 4,
   },
-  loadingBubble: {
+  assistantTypingRow: {
     alignItems: 'center',
-    borderRadius: 18,
-    borderWidth: 1,
     flexDirection: 'row',
     gap: 10,
+  },
+  typingAvatar: {
+    alignItems: 'center',
+    height: 28,
+    justifyContent: 'center',
+    width: 28,
+  },
+  loadingBubble: {
+    borderRadius: 18,
+    borderWidth: 1,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  loadingText: {},
   filterBar: {
-    borderBottomWidth: 1,
-    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingVertical: 8,
   },
   filterContent: {
     gap: 8,
@@ -889,8 +964,14 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     maxWidth: 180,
+    minHeight: 36,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 8,
+  },
+  filterChipContent: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
   },
   filterChipText: {},
 });

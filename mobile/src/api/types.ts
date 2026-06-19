@@ -14,6 +14,7 @@ export interface SafeUser {
   email: string;
   name: string;
   role: string;
+  provider?: 'local' | 'google' | 'github';
   createdAt: string;
   updatedAt: string;
 }

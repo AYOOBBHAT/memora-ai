@@ -1,9 +1,13 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { memo, useEffect, useRef } from 'react';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 
 import type { ChatCitationSource } from '../../../api/types';
 import type { ChatMessage } from '../../../stores/chat.store';
+import { formatRelativeTime } from '../../documents/utils/formatDocument';
 import { useTheme } from '../../../theme/ThemeProvider';
 
+import { ChatMarkdown } from './ChatMarkdown';
 import { SourceCitationList } from './SourceCitationList';
 
 interface ChatMessageBubbleProps {
@@ -11,69 +15,219 @@ interface ChatMessageBubbleProps {
   onSourcePress: (source: ChatCitationSource) => void;
 }
 
-export function ChatMessageBubble({ message, onSourcePress }: ChatMessageBubbleProps) {
+function formatMessageTime(isoDate: string): string {
+  try {
+    return new Date(isoDate).toLocaleTimeString(undefined, {
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  } catch {
+    return '';
+  }
+}
+
+function ChatMessageBubbleComponent({ message, onSourcePress }: ChatMessageBubbleProps) {
   const { theme } = useTheme();
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(8)).current;
   const isUser = message.role === 'user';
   const isError = Boolean(message.error);
 
-  const bubbleBackground = isUser
-    ? theme.colors.primary
-    : isError
-      ? theme.colors.surfaceSecondary
-      : theme.colors.surface;
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [fadeAnim, slideAnim]);
 
-  const textColor = isUser ? theme.colors.primaryText : theme.colors.text;
-  const borderColor = isError ? theme.colors.error : theme.colors.border;
+  const textColor = isUser ? theme.colors.primaryText : isError ? theme.colors.error : theme.colors.text;
+  const timeLabel = formatMessageTime(message.createdAt);
 
-  return (
-    <View style={[styles.row, isUser ? styles.rowUser : styles.rowAssistant]}>
-      <View
+  if (isUser) {
+    return (
+      <Animated.View
         style={[
-          styles.bubble,
+          styles.rowUser,
           {
-            backgroundColor: bubbleBackground,
-            borderColor,
-            borderWidth: isUser ? 0 : 1,
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
           },
         ]}
       >
-        <Text
+        <View style={styles.userColumn}>
+          <View
+            style={[
+              styles.userBubble,
+              theme.elevation.soft,
+              {
+                backgroundColor: theme.colors.primary,
+                borderBottomRightRadius: 6,
+                borderRadius: 20,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.userText,
+                {
+                  color: theme.colors.primaryText,
+                  fontSize: theme.typography.fontSizes.md,
+                },
+              ]}
+            >
+              {message.content}
+            </Text>
+          </View>
+          {timeLabel ? (
+            <Text
+              style={[
+                styles.timestamp,
+                {
+                  color: theme.colors.textSecondary,
+                  fontSize: theme.typography.fontSizes.xs,
+                },
+              ]}
+            >
+              {timeLabel}
+            </Text>
+          ) : null}
+        </View>
+      </Animated.View>
+    );
+  }
+
+  return (
+    <Animated.View
+      style={[
+        styles.rowAssistant,
+        {
+          opacity: fadeAnim,
+          transform: [{ translateY: slideAnim }],
+        },
+      ]}
+    >
+      <View
+        style={[
+          styles.avatar,
+          {
+            backgroundColor: `${theme.colors.primary}18`,
+            borderRadius: theme.radii.full,
+          },
+        ]}
+      >
+        <Ionicons color={theme.colors.primary} name="sparkles" size={16} />
+      </View>
+      <View style={styles.assistantColumn}>
+        <View
           style={[
-            styles.content,
+            styles.assistantBubble,
+            theme.elevation.soft,
             {
-              color: isError ? theme.colors.error : textColor,
-              fontSize: theme.typography.fontSizes.md,
+              backgroundColor: theme.colors.surfaceElevated,
+              borderColor: isError ? `${theme.colors.error}55` : `${theme.colors.border}AA`,
+              borderRadius: theme.radii.lg,
             },
           ]}
         >
-          {message.content}
-        </Text>
-        {!isUser && message.sources && message.sources.length > 0 ? (
-          <SourceCitationList onSourcePress={onSourcePress} sources={message.sources} />
+          {isError ? (
+            <Text
+              style={[
+                styles.errorText,
+                {
+                  color: theme.colors.error,
+                  fontSize: theme.typography.fontSizes.md,
+                },
+              ]}
+            >
+              {message.content}
+            </Text>
+          ) : (
+            <ChatMarkdown content={message.content} isError={isError} textColor={textColor} />
+          )}
+          {message.sources && message.sources.length > 0 ? (
+            <SourceCitationList onSourcePress={onSourcePress} sources={message.sources} />
+          ) : null}
+        </View>
+        {timeLabel ? (
+          <Text
+            style={[
+              styles.timestamp,
+              {
+                color: theme.colors.textSecondary,
+                fontSize: theme.typography.fontSizes.xs,
+              },
+            ]}
+          >
+            {timeLabel} · {formatRelativeTime(message.createdAt)}
+          </Text>
         ) : null}
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
+export const ChatMessageBubble = memo(
+  ChatMessageBubbleComponent,
+  (prev, next) =>
+    prev.message.id === next.message.id &&
+    prev.message.content === next.message.content &&
+    prev.message.error === next.message.error &&
+    prev.message.sources === next.message.sources,
+);
+
 const styles = StyleSheet.create({
-  row: {
-    marginBottom: 12,
-    paddingHorizontal: 16,
-  },
   rowUser: {
     alignItems: 'flex-end',
+    marginBottom: 14,
+    paddingHorizontal: 16,
   },
   rowAssistant: {
-    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 14,
+    paddingHorizontal: 16,
   },
-  bubble: {
-    borderRadius: 16,
-    maxWidth: '85%',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+  userColumn: {
+    alignItems: 'flex-end',
+    gap: 4,
+    maxWidth: '78%',
   },
-  content: {
+  userBubble: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  userText: {
     lineHeight: 22,
+  },
+  assistantColumn: {
+    flex: 1,
+    gap: 4,
+    maxWidth: '92%',
+  },
+  avatar: {
+    alignItems: 'center',
+    height: 32,
+    justifyContent: 'center',
+    marginTop: 4,
+    width: 32,
+  },
+  assistantBubble: {
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  errorText: {
+    lineHeight: 22,
+  },
+  timestamp: {
+    paddingHorizontal: 4,
   },
 });
