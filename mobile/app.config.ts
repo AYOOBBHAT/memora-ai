@@ -67,6 +67,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 
     versionCode: 1,
 
+    softwareKeyboardLayoutMode: 'resize',
+
     adaptiveIcon: {
 
       backgroundColor: SPLASH_BACKGROUND,

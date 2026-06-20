@@ -16,6 +16,7 @@ import {
   View,
 } from 'react-native';
 import type { SafeDocument } from '../../../api/types';
+import { useHeaderHeight } from '@react-navigation/elements';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -106,6 +107,7 @@ function getChatSuggestions(
 
 export function ChatScreen({ navigation, route }: Props) {
   const { theme } = useTheme();
+  const headerHeight = useHeaderHeight();
   const flatListRef = useRef<FlatList<ChatMessage>>(null);
   const inputRef = useRef<TextInput>(null);
   const [input, setInput] = useState('');
@@ -664,20 +666,23 @@ export function ChatScreen({ navigation, route }: Props) {
       edges={['bottom']}
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
-      {offlineBanner ? (
-        <View style={styles.offlineBanner}>
-          <ErrorBanner message="You're offline. Messages can't be sent until you're back online." />
-        </View>
-      ) : null}
-      {scopedCollection ? (
-        <CollectionScopeBadge collection={scopedCollection} onClear={handleClearCollectionScope} />
-      ) : null}
-      {collectionFilter}
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
         style={styles.flex}
       >
+        {offlineBanner ? (
+          <View style={styles.offlineBanner}>
+            <ErrorBanner message="You're offline. Messages can't be sent until you're back online." />
+          </View>
+        ) : null}
+        {scopedCollection ? (
+          <CollectionScopeBadge
+            collection={scopedCollection}
+            onClear={handleClearCollectionScope}
+          />
+        ) : null}
+        {collectionFilter}
         <View style={styles.messageArea}>
           <FlatList
             ref={flatListRef}
