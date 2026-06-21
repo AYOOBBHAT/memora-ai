@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -11,10 +11,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useGoogleSignIn } from '../../../hooks/mutations/useGoogleSignIn';
 import { getApiErrorMessage } from '../../../lib/apiError';
 import {
-  extractGoogleIdToken,
+  getGoogleSignInErrorMessage,
   isGoogleSignInConfigured,
-  logGoogleSignInConfig,
-  useGoogleIdTokenRequest,
+  requestGoogleIdToken,
 } from '../../../lib/googleSignIn';
 import { useTheme } from '../../../theme/ThemeProvider';
 
@@ -24,7 +23,6 @@ interface GoogleSignInButtonProps {
 
 export function GoogleSignInButton({ onError }: GoogleSignInButtonProps) {
   const { theme } = useTheme();
-  const [request, response, promptAsync] = useGoogleIdTokenRequest();
   const googleSignIn = useGoogleSignIn();
   const { mutate: signInWithGoogle } = googleSignIn;
   const [isPrompting, setIsPrompting] = useState(false);
@@ -32,52 +30,34 @@ export function GoogleSignInButton({ onError }: GoogleSignInButtonProps) {
   const isLoading = isPrompting || googleSignIn.isPending;
   const isConfigured = isGoogleSignInConfigured();
 
-  useEffect(() => {
-    logGoogleSignInConfig(request);
-  }, [request]);
-
-  useEffect(() => {
-    if (!response) {
-      return;
-    }
-
-    setIsPrompting(false);
-
-    const idToken = extractGoogleIdToken(response);
-    if (!idToken) {
-      if (response.type === 'error') {
-        onError?.('Google sign-in was cancelled or failed');
-      }
-      return;
-    }
-
-    signInWithGoogle(
-      { idToken },
-      {
-        onError: (error) => {
-          onError?.(getApiErrorMessage(error, 'Google sign-in failed'));
-        },
-      },
-    );
-  }, [response, signInWithGoogle, onError]);
-
   const handlePress = async () => {
     if (!isConfigured) {
       onError?.('Google Sign-In is not configured. Set EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID.');
       return;
     }
 
-    if (!request) {
-      onError?.('Google Sign-In is not ready yet. Please try again.');
-      return;
-    }
-
     setIsPrompting(true);
+
     try {
-      await promptAsync();
-    } catch {
+      const idToken = await requestGoogleIdToken();
+
+      signInWithGoogle(
+        { idToken },
+        {
+          onError: (error) => {
+            onError?.(getApiErrorMessage(error, 'Google sign-in failed'));
+          },
+          onSettled: () => {
+            setIsPrompting(false);
+          },
+        },
+      );
+    } catch (error) {
       setIsPrompting(false);
-      onError?.('Could not open Google sign-in');
+      const message = getGoogleSignInErrorMessage(error);
+      if (message) {
+        onError?.(message);
+      }
     }
   };
 

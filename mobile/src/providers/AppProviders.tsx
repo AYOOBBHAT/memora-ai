@@ -8,6 +8,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { setupInterceptors } from '../api/interceptors';
+import { configureGoogleSignIn } from '../lib/googleSignIn';
 import { queryClient } from '../lib/queryClient';
 import { useAuthStore } from '../stores/auth.store';
 import { ThemeProvider, useTheme } from '../theme/ThemeProvider';
@@ -18,6 +19,7 @@ function AuthGate({ children }: { children: ReactNode }) {
   const hydrate = useAuthStore((state) => state.hydrate);
 
   useEffect(() => {
+    configureGoogleSignIn();
     void hydrate();
   }, [hydrate]);
 

@@ -5,8 +5,16 @@ const SPLASH_BACKGROUND = '#0F172A';
 
 const GOOGLE_CLIENT_ID_SUFFIX = '.apps.googleusercontent.com';
 
-/** Inline for Expo config — Node cannot require TS files under src/ at config time. */
-function googleClientIdToNativeRedirectScheme(clientId: string): string | null {
+const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID?.trim() ?? '';
+
+if (!googleWebClientId) {
+  throw new Error(
+    'EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID is required for production builds.',
+  );
+}
+
+/** Reversed Web client ID scheme required by @react-native-google-signin/google-signin on iOS. */
+function googleWebClientIdToIosUrlScheme(clientId: string): string | null {
   const normalized = clientId.trim();
   if (!normalized.endsWith(GOOGLE_CLIENT_ID_SUFFIX)) {
     return null;
@@ -20,21 +28,33 @@ function googleClientIdToNativeRedirectScheme(clientId: string): string | null {
   return `com.googleusercontent.apps.${clientIdPart}`;
 }
 
-const googleAndroidAuthScheme = googleClientIdToNativeRedirectScheme(
-  process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? '',
-);
-const googleIosAuthScheme = googleClientIdToNativeRedirectScheme(
-  process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '',
-);
+const googleIosUrlScheme = googleWebClientIdToIosUrlScheme(googleWebClientId);
 
-const appSchemes = [
-  'memora',
-  googleAndroidAuthScheme,
-  googleIosAuthScheme,
-].filter((scheme): scheme is string => Boolean(scheme));
+if (!googleIosUrlScheme) {
+  throw new Error(
+    'EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID must be a valid Google OAuth Web client ID (*.apps.googleusercontent.com).',
+  );
+}
+
+const plugins: ExpoConfig['plugins'] = [
+  [
+    '@react-native-google-signin/google-signin',
+    { iosUrlScheme: googleIosUrlScheme },
+  ],
+  ['expo-build-properties', { android: { usesCleartextTraffic: true } }],
+  [
+    'expo-share-intent',
+    {
+      disableIOS: true,
+      androidIntentFilters: ['text/plain', 'text/*'],
+      androidMainActivityAttributes: {
+        'android:launchMode': 'singleTask',
+      },
+    },
+  ],
+];
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
-
   ...config,
 
   name: 'Memora',
@@ -49,20 +69,17 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 
   userInterfaceStyle: 'automatic',
 
-  scheme: appSchemes.length === 1 ? appSchemes[0] : appSchemes,
+  scheme: 'memora',
 
   ios: {
-
     supportsTablet: true,
 
     bundleIdentifier: 'com.memora.mobile',
 
     buildNumber: '1',
-
   },
 
   android: {
-
     package: 'com.memora.mobile',
 
     versionCode: 1,
@@ -70,50 +87,27 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     softwareKeyboardLayoutMode: 'resize',
 
     adaptiveIcon: {
-
       backgroundColor: SPLASH_BACKGROUND,
 
       foregroundImage: APP_LOGO,
-
     },
 
     predictiveBackGestureEnabled: false,
-
   },
 
   web: {
-
     favicon: APP_LOGO,
-
   },
 
-  plugins: [
-    'expo-web-browser',
-    ['expo-build-properties', { android: { usesCleartextTraffic: true } }],
-    [
-      'expo-share-intent',
-      {
-        disableIOS: true,
-        androidIntentFilters: ['text/plain', 'text/*'],
-        androidMainActivityAttributes: {
-          'android:launchMode': 'singleTask',
-        },
-      },
-    ],
-  ],
+  plugins,
 
   extra: {
     eas: {
-      projectId: "1c42952f-f697-437d-9970-bfbae43c5462",
+      projectId: '1c42952f-f697-437d-9970-bfbae43c5462',
     },
 
     apiUrl: process.env.EXPO_PUBLIC_API_URL,
 
-    googleWebClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-
-    googleAndroidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
-
+    googleWebClientId,
   },
-
 });
-

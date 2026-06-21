@@ -1,67 +1,100 @@
-import * as Google from 'expo-auth-session/providers/google';
-import * as WebBrowser from 'expo-web-browser';
-import type { AuthSessionResult } from 'expo-auth-session';
+import {
+  GoogleSignin,
+  isCancelledResponse,
+  isErrorWithCode,
+  statusCodes,
+} from '@react-native-google-signin/google-signin';
 import { Platform } from 'react-native';
 
 import { env } from '../config/env';
-import { googleClientIdToNativeRedirectUri } from './googleOAuthRedirect';
 
-WebBrowser.maybeCompleteAuthSession();
+let isConfigured = false;
 
 export function isGoogleSignInConfigured(): boolean {
   return Boolean(env.googleWebClientId);
 }
 
-/**
- * Android OAuth clients reject package-name redirects unless "Custom URI scheme" is enabled.
- * Use Google's reversed client ID redirect for standalone/EAS builds instead of
- * Application.applicationId:/oauthredirect (expo-auth-session default).
- */
-export function resolveGoogleOAuthRedirectUri(): string | undefined {
-  if (Platform.OS === 'android' && env.googleAndroidClientId) {
-    return (
-      googleClientIdToNativeRedirectUri(env.googleAndroidClientId) ?? undefined
-    );
-  }
-
-  // iOS standalone falls back to Web client ID when iosClientId is unset.
-  if (Platform.OS === 'ios' && env.googleWebClientId) {
-    return googleClientIdToNativeRedirectUri(env.googleWebClientId) ?? undefined;
-  }
-
-  return undefined;
-}
-
-export function logGoogleSignInConfig(
-  request: { clientId: string; redirectUri: string; url: string | null } | null,
-): void {
-  if (!__DEV__ || !request) {
+export function configureGoogleSignIn(): void {
+  if (isConfigured || !env.googleWebClientId) {
     return;
   }
 
-  console.log('[GoogleSignIn] OAuth configuration', {
-    clientId: request.clientId,
-    androidClientId: env.googleAndroidClientId || null,
-    webClientId: env.googleWebClientId || null,
-    redirectUri: request.redirectUri,
-    authorizationUrl: request.url,
+  GoogleSignin.configure({
+    webClientId: env.googleWebClientId,
+    offlineAccess: false,
   });
+
+  isConfigured = true;
+
+  if (__DEV__) {
+    console.log('[GoogleSignIn] Native SDK configured', {
+      webClientId: env.googleWebClientId,
+    });
+  }
 }
 
-export function useGoogleIdTokenRequest() {
-  const redirectUri = resolveGoogleOAuthRedirectUri();
-
-  return Google.useIdTokenAuthRequest({
-    clientId: env.googleWebClientId || undefined,
-    androidClientId: env.googleAndroidClientId || undefined,
-    ...(redirectUri ? { redirectUri } : {}),
-  });
+export class GoogleSignInCancelledError extends Error {
+  constructor() {
+    super('Google sign-in was cancelled');
+    this.name = 'GoogleSignInCancelledError';
+  }
 }
 
-export function extractGoogleIdToken(response: AuthSessionResult | null): string | null {
-  if (response?.type !== 'success') {
+export async function requestGoogleIdToken(): Promise<string> {
+  configureGoogleSignIn();
+
+  if (!isGoogleSignInConfigured()) {
+    throw new Error('Google Sign-In is not configured. Set EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID.');
+  }
+
+  if (Platform.OS === 'android') {
+    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+  }
+
+  const response = await GoogleSignin.signIn();
+
+  if (isCancelledResponse(response)) {
+    throw new GoogleSignInCancelledError();
+  }
+
+  const idToken = response.data.idToken;
+  if (!idToken) {
+    throw new Error('Google did not return a sign-in token. Please try again.');
+  }
+
+  return idToken;
+}
+
+export function getGoogleSignInErrorMessage(error: unknown): string | null {
+  if (error instanceof GoogleSignInCancelledError) {
     return null;
   }
 
-  return response.params.id_token ?? null;
+  if (isErrorWithCode(error)) {
+    switch (error.code) {
+      case statusCodes.IN_PROGRESS:
+        return 'Google sign-in is already in progress. Please wait.';
+      case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
+        return 'Google Play Services is unavailable. Update Play Services and try again.';
+      case statusCodes.NULL_PRESENTER:
+        return 'Could not open Google sign-in. Please try again.';
+      default:
+        return 'Google sign-in failed. Please try again.';
+    }
+  }
+
+  if (error instanceof Error) {
+    const message = error.message.trim();
+    if (!message) {
+      return 'Google sign-in failed. Please try again.';
+    }
+
+    if (/network/i.test(message)) {
+      return 'Network error. Check your connection and try again.';
+    }
+
+    return message;
+  }
+
+  return 'Google sign-in failed. Please try again.';
 }
