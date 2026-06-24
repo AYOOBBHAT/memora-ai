@@ -27,12 +27,13 @@ import { CollectionScopeBadge } from '../components/CollectionScopeBadge';
 import { TypingIndicator } from '../components/TypingIndicator';
 import { CollectionIconDisplay } from '../../collections/components/CollectionIconDisplay';
 import { ErrorBanner } from '../../collections/components/ErrorBanner';
+import { LoadErrorState } from '../../../components/ui/LoadErrorState';
 import { useSendChat } from '../../../hooks/mutations/useSendChat';
 import { useConversation } from '../../../hooks/queries/useConversation';
 import { useCollections } from '../../../hooks/queries/useCollections';
 import { useDocuments } from '../../../hooks/queries/useDocuments';
 import { findQuickNotesCollectionId } from '../../onboarding/utils/quickNotes';
-import { getApiErrorMessage } from '../../../lib/apiError';
+import { getApiErrorMessage, getChatErrorMessage } from '../../../lib/apiError';
 import { isNetworkError } from '../../../lib/network';
 import type { ChatStackParamList } from '../../../navigation/types';
 import {
@@ -136,7 +137,7 @@ export function ChatScreen({ navigation, route }: Props) {
 
   const resumeConversationId = route.params?.conversationId;
   const launchCollectionId = route.params?.collectionId;
-  const { data: conversationDetail, isLoading: isLoadingConversation } =
+  const { data: conversationDetail, isLoading: isLoadingConversation, isError: isConversationError, error: conversationError, refetch: refetchConversation, isFetching: isRefetchingConversation } =
     useConversation(resumeConversationId ?? null);
 
   const { data: collections = [] } = useCollections();
@@ -256,7 +257,7 @@ export function ChatScreen({ navigation, route }: Props) {
             color: singleCollection.color,
           }
         : null,
-      messages: conversationDetail.messages.map(historyMessageToChatMessage),
+      messages: (conversationDetail.messages ?? []).map(historyMessageToChatMessage),
     });
     setSelectedCollectionIds(collectionIds);
     navigation.setParams({ conversationId: undefined });
@@ -317,7 +318,7 @@ export function ChatScreen({ navigation, route }: Props) {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, sendChat.isPending, scrollToBottom]);
+  }, [messages.length, sendChat.isPending, scrollToBottom]);
 
   useEffect(() => {
     if (!isKeyboardVisible || messages.length === 0) {
@@ -498,8 +499,8 @@ export function ChatScreen({ navigation, route }: Props) {
           addMessage({
               id: response.messageId ?? createChatMessageId(),
               role: 'assistant',
-              content: response.answer,
-              sources: response.sources,
+              content: response.answer.trim(),
+              sources: response.sources ?? [],
               createdAt: new Date().toISOString(),
             });
           },
@@ -511,10 +512,7 @@ export function ChatScreen({ navigation, route }: Props) {
             addMessage({
               id: createChatMessageId(),
               role: 'assistant',
-              content: getApiErrorMessage(
-                error,
-                'Something went wrong while generating an answer. Please try again.',
-              ),
+              content: getChatErrorMessage(error),
               createdAt: new Date().toISOString(),
               error: true,
           });
@@ -551,13 +549,17 @@ export function ChatScreen({ navigation, route }: Props) {
       navigation.setParams({ initialMessage: undefined, autoSend: undefined });
 
       void (async () => {
-        const quickNotesId = await findQuickNotesCollectionId();
-        if (quickNotesId) {
-          setSelectedCollectionIds([quickNotesId]);
-          sendMessage(trimmed, [quickNotesId]);
-          return;
+        try {
+          const quickNotesId = await findQuickNotesCollectionId();
+          if (quickNotesId) {
+            setSelectedCollectionIds([quickNotesId]);
+            sendMessage(trimmed, [quickNotesId]);
+            return;
+          }
+          sendMessage(trimmed);
+        } catch {
+          sendMessage(trimmed);
         }
-        sendMessage(trimmed);
       })();
       return;
     }
@@ -576,6 +578,43 @@ export function ChatScreen({ navigation, route }: Props) {
   );
 
   const keyExtractor = useCallback((item: ChatMessage) => item.id, []);
+
+  const handleContentSizeChange = useCallback(() => {
+    scrollToBottom(false);
+  }, [scrollToBottom]);
+
+  const listFooterComponent = useMemo(
+    () =>
+      sendChat.isPending ? (
+        <View style={styles.loadingRow}>
+          <View
+            style={[
+              styles.loadingBubble,
+              {
+                backgroundColor: theme.colors.aiSurface,
+                borderColor: theme.colors.border,
+                borderRadius: theme.radii.lg,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.typingLabel,
+                {
+                  color: theme.colors.textSecondary,
+                  fontSize: theme.typography.fontSizes.xs,
+                  fontWeight: theme.typography.fontWeights.medium,
+                },
+              ]}
+            >
+              Memora is thinking
+            </Text>
+            <TypingIndicator />
+          </View>
+        </View>
+      ) : null,
+    [sendChat.isPending, theme],
+  );
 
   const handleSuggestionPress = useCallback((suggestion: string) => {
     setInput(suggestion);
@@ -661,16 +700,27 @@ export function ChatScreen({ navigation, route }: Props) {
     );
   }
 
+  if (resumeConversationId && isConversationError && messages.length === 0) {
+    return (
+      <LoadErrorState
+        isRetrying={isRefetchingConversation}
+        message={getApiErrorMessage(conversationError, 'Could not load this conversation.')}
+        onBack={() => navigation.setParams({ conversationId: undefined })}
+        onRetry={() => void refetchConversation()}
+      />
+    );
+  }
+
+  const safeAreaEdges = isKeyboardVisible ? [] : (['bottom'] as const);
+  const inputBottomPadding = isKeyboardVisible ? 8 : 0;
+
   return (
-    <SafeAreaView
-      edges={['bottom']}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={headerHeight}
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
-        style={styles.flex}
-      >
+      <SafeAreaView edges={safeAreaEdges} style={styles.flex}>
         {offlineBanner ? (
           <View style={styles.offlineBanner}>
             <ErrorBanner message="You're offline. Messages can't be sent until you're back online." />
@@ -691,43 +741,17 @@ export function ChatScreen({ navigation, route }: Props) {
               isConversationActive ? styles.listContentActive : styles.listContentIdle,
             ]}
             data={messages}
+            initialNumToRender={15}
             keyboardDismissMode="interactive"
             keyboardShouldPersistTaps="handled"
             keyExtractor={keyExtractor}
-            ListFooterComponent={
-              sendChat.isPending ? (
-                <View style={styles.loadingRow}>
-                  <View style={styles.assistantTypingRow}>
-                    <View
-                      style={[
-                        styles.typingAvatar,
-                        {
-                          backgroundColor: `${theme.colors.primary}18`,
-                          borderRadius: theme.radii.full,
-                        },
-                      ]}
-                    >
-                      <Ionicons color={theme.colors.primary} name="sparkles" size={14} />
-                    </View>
-                    <View
-                      style={[
-                        styles.loadingBubble,
-                        theme.elevation.soft,
-                        {
-                          backgroundColor: theme.colors.surfaceElevated,
-                          borderColor: `${theme.colors.primary}33`,
-                        },
-                      ]}
-                    >
-                      <TypingIndicator />
-                    </View>
-                  </View>
-                </View>
-              ) : null
-            }
-            onContentSizeChange={() => scrollToBottom(false)}
+            ListFooterComponent={listFooterComponent}
+            maxToRenderPerBatch={10}
+            onContentSizeChange={handleContentSizeChange}
+            removeClippedSubviews={Platform.OS === 'android'}
             renderItem={renderMessage}
             style={styles.flex}
+            windowSize={11}
           />
 
           {emptyOverlayMounted ? (
@@ -746,40 +770,31 @@ export function ChatScreen({ navigation, route }: Props) {
                 ]}
               >
                 <View style={styles.emptyState}>
-                  <View
-                    style={[
-                      styles.emptyIconWrap,
-                      {
-                        backgroundColor: `${theme.colors.primary}18`,
-                        borderRadius: theme.radii.xl,
-                      },
-                    ]}
-                  >
-                    <Ionicons color={theme.colors.primary} name="sparkles" size={28} />
-                  </View>
                   <Text
                     style={[
                       styles.emptyTitle,
                       {
                         color: theme.colors.text,
-                        fontSize: theme.typography.fontSizes.lg,
-                        fontWeight: theme.typography.fontWeights.semibold,
+                        fontSize: theme.typography.fontSizes.xl,
+                        fontWeight: theme.typography.fontWeights.bold,
+                        letterSpacing: -0.5,
                       },
                     ]}
                   >
-                    Ask questions about your saved knowledge
+                    Your second brain
                   </Text>
                   <Text
                     style={[
                       styles.emptySubtitle,
                       {
                         color: theme.colors.textSecondary,
-                        fontSize: theme.typography.fontSizes.sm,
+                        fontSize: theme.typography.fontSizes.md,
+                        lineHeight: 24,
                       },
                     ]}
                   >
-                    Memora searches your notes, PDFs, websites and YouTube to generate answers
-                    with citations.
+                    Ask questions about your notes, PDFs, websites and YouTube. Memora answers with
+                    citations from your library.
                   </Text>
                 </View>
               </Animated.View>
@@ -809,9 +824,9 @@ export function ChatScreen({ navigation, route }: Props) {
                       style={({ pressed }) => [
                         styles.suggestionChip,
                         {
-                          backgroundColor: theme.colors.surfaceElevated,
-                          borderColor: `${theme.colors.border}CC`,
-                          borderRadius: theme.radii.full,
+                          backgroundColor: theme.colors.surface,
+                          borderColor: theme.colors.border,
+                          borderRadius: theme.radii.lg,
                           opacity: pressed ? 0.85 : 1,
                         },
                       ]}
@@ -837,16 +852,17 @@ export function ChatScreen({ navigation, route }: Props) {
         </View>
         <ChatInput
           ref={inputRef}
+          bottomInset={inputBottomPadding}
           disabled={sendChat.isPending || offlineBanner}
           onBlur={() => setIsInputFocused(false)}
           onChangeText={setInput}
           onFocus={() => setIsInputFocused(true)}
           onSend={handleSend}
-          placeholder="Ask Memora anything..."
+          placeholder="Ask about your notes…"
           value={input}
         />
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -952,10 +968,15 @@ const styles = StyleSheet.create({
     width: 28,
   },
   loadingBubble: {
-    borderRadius: 18,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    gap: 8,
+    maxWidth: '88%',
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+  },
+  typingLabel: {
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
   },
   filterBar: {
     borderBottomWidth: StyleSheet.hairlineWidth,

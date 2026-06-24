@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { AuthFooterLink } from '../components/AuthFooterLink';
@@ -9,6 +9,12 @@ import { AuthTextInput } from '../components/AuthTextInput';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import { useRegister } from '../../../hooks/mutations/useRegister';
 import { getApiErrorMessage } from '../../../lib/apiError';
+import {
+  validateConfirmPassword,
+  validateEmail,
+  validateName,
+  validatePassword,
+} from '../utils/authValidation';
 import type { AuthStackParamList } from '../../../navigation/types';
 import { useTheme } from '../../../theme/ThemeProvider';
 
@@ -17,34 +23,44 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 export function RegisterScreen({ navigation }: Props) {
   const { theme } = useTheme();
   const register = useRegister();
+  const nameRef = useRef<TextInput>(null);
+  const emailRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
+  const confirmPasswordRef = useRef<TextInput>(null);
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [fieldError, setFieldError] = useState<string | null>(null);
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [errors, setErrors] = useState<{
+    name?: string;
+    email?: string;
+    password?: string;
+    confirmPassword?: string;
+  }>({});
   const [apiError, setApiError] = useState<string | null>(null);
 
+  const clearError = (field: keyof typeof errors) => {
+    setErrors((current) => ({ ...current, [field]: undefined }));
+  };
+
   const validate = (): boolean => {
-    if (!name.trim()) {
-      setFieldError('Name is required');
-      return false;
-    }
-    if (!email.trim()) {
-      setFieldError('Email is required');
-      return false;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      setFieldError('Enter a valid email address');
-      return false;
-    }
-    if (password.length < 8) {
-      setFieldError('Password must be at least 8 characters');
-      return false;
-    }
-    setFieldError(null);
-    return true;
+    const nextErrors = {
+      name: validateName(name) ?? undefined,
+      email: validateEmail(email) ?? undefined,
+      password: validatePassword(password) ?? undefined,
+      confirmPassword: validateConfirmPassword(password, confirmPassword) ?? undefined,
+    };
+
+    setErrors(nextErrors);
+    return !Object.values(nextErrors).some(Boolean);
   };
 
   const handleSubmit = () => {
+    if (register.isPending) {
+      return;
+    }
+
     setApiError(null);
     if (!validate()) {
       return;
@@ -81,41 +97,85 @@ export function RegisterScreen({ navigation }: Props) {
       ) : null}
 
       <AuthTextInput
+        ref={nameRef}
         autoCapitalize="words"
         autoComplete="name"
+        error={errors.name}
         label="Name"
         placeholder="Your name"
+        returnKeyType="next"
+        textContentType="name"
         value={name}
-        onChangeText={setName}
+        onChangeText={(value) => {
+          clearError('name');
+          setName(value);
+        }}
+        onSubmitEditing={() => emailRef.current?.focus()}
       />
 
       <AuthTextInput
+        ref={emailRef}
         autoCapitalize="none"
         autoComplete="email"
+        autoCorrect={false}
+        error={errors.email}
         keyboardType="email-address"
         label="Email"
         placeholder="you@example.com"
+        returnKeyType="next"
+        textContentType="emailAddress"
         value={email}
-        onChangeText={setEmail}
+        onChangeText={(value) => {
+          clearError('email');
+          setEmail(value);
+        }}
+        onSubmitEditing={() => passwordRef.current?.focus()}
       />
 
       <AuthTextInput
+        ref={passwordRef}
         autoCapitalize="none"
         autoComplete="new-password"
+        autoCorrect={false}
+        error={errors.password}
         label="Password"
+        passwordToggle
         placeholder="At least 8 characters"
+        returnKeyType="next"
         secureTextEntry
+        textContentType="newPassword"
         value={password}
-        onChangeText={setPassword}
+        onChangeText={(value) => {
+          clearError('password');
+          setPassword(value);
+        }}
+        onSubmitEditing={() => confirmPasswordRef.current?.focus()}
       />
 
-      {fieldError ? (
-        <Text style={[styles.fieldError, { color: theme.colors.error }]}>{fieldError}</Text>
-      ) : null}
+      <AuthTextInput
+        ref={confirmPasswordRef}
+        autoCapitalize="none"
+        autoComplete="new-password"
+        autoCorrect={false}
+        error={errors.confirmPassword}
+        label="Confirm password"
+        passwordToggle
+        placeholder="Re-enter your password"
+        returnKeyType="done"
+        secureTextEntry
+        textContentType="newPassword"
+        value={confirmPassword}
+        onChangeText={(value) => {
+          clearError('confirmPassword');
+          setConfirmPassword(value);
+        }}
+        onSubmitEditing={handleSubmit}
+      />
 
       <AuthPrimaryButton
         label="Create account"
         loading={register.isPending}
+        loadingLabel="Creating account…"
         onPress={handleSubmit}
       />
 
@@ -125,9 +185,6 @@ export function RegisterScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  fieldError: {
-    fontSize: 14,
-  },
   errorBox: {
     borderRadius: 12,
     padding: 12,

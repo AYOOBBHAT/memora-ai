@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { AuthFooterLink } from '../components/AuthFooterLink';
@@ -9,6 +9,7 @@ import { AuthTextInput } from '../components/AuthTextInput';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import { useLogin } from '../../../hooks/mutations/useLogin';
 import { getApiErrorMessage } from '../../../lib/apiError';
+import { validateEmail, validatePassword } from '../utils/authValidation';
 import type { AuthStackParamList } from '../../../navigation/types';
 import { useTheme } from '../../../theme/ThemeProvider';
 
@@ -17,29 +18,36 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 export function LoginScreen({ navigation }: Props) {
   const { theme } = useTheme();
   const login = useLogin();
+  const emailRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [fieldError, setFieldError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [apiError, setApiError] = useState<string | null>(null);
 
+  const clearError = (field: keyof typeof errors) => {
+    setErrors((current) => ({ ...current, [field]: undefined }));
+  };
+
   const validate = (): boolean => {
-    if (!email.trim()) {
-      setFieldError('Email is required');
-      return false;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      setFieldError('Enter a valid email address');
-      return false;
-    }
-    if (!password) {
-      setFieldError('Password is required');
-      return false;
-    }
-    setFieldError(null);
-    return true;
+    const emailError = validateEmail(email);
+    const passwordError = validatePassword(password);
+
+    const nextErrors = {
+      email: emailError ?? undefined,
+      password: passwordError ?? undefined,
+    };
+
+    setErrors(nextErrors);
+    return !emailError && !passwordError;
   };
 
   const handleSubmit = () => {
+    if (login.isPending) {
+      return;
+    }
+
     setApiError(null);
     if (!validate()) {
       return;
@@ -73,23 +81,30 @@ export function LoginScreen({ navigation }: Props) {
         </View>
       ) : null}
 
-      <View style={styles.field}>
-        <AuthTextInput
-          autoCapitalize="none"
-          autoComplete="email"
-          keyboardType="email-address"
-          label="Email"
-          placeholder="you@example.com"
-          value={email}
-          onChangeText={setEmail}
-        />
-      </View>
+      <AuthTextInput
+        ref={emailRef}
+        autoCapitalize="none"
+        autoComplete="email"
+        autoCorrect={false}
+        error={errors.email}
+        keyboardType="email-address"
+        label="Email"
+        placeholder="you@example.com"
+        returnKeyType="next"
+        textContentType="emailAddress"
+        value={email}
+        onChangeText={(value) => {
+          clearError('email');
+          setEmail(value);
+        }}
+        onSubmitEditing={() => passwordRef.current?.focus()}
+      />
 
-      <View style={styles.field}>
+      <View style={styles.passwordField}>
         <View style={styles.labelRow}>
           <Text
             style={[
-              styles.label,
+              styles.passwordLabel,
               {
                 color: theme.colors.text,
                 fontSize: theme.typography.fontSizes.sm,
@@ -103,7 +118,10 @@ export function LoginScreen({ navigation }: Props) {
             accessibilityRole="button"
             hitSlop={8}
             onPress={() => navigation.navigate('ForgotPassword')}
-            style={({ pressed }) => [{ opacity: pressed ? 0.75 : 1 }]}
+            style={({ pressed }) => [
+              styles.forgotLink,
+              { opacity: pressed ? 0.75 : 1 },
+            ]}
           >
             <Text
               style={[
@@ -120,22 +138,29 @@ export function LoginScreen({ navigation }: Props) {
           </Pressable>
         </View>
         <AuthTextInput
+          ref={passwordRef}
           autoCapitalize="none"
           autoComplete="password"
+          autoCorrect={false}
+          error={errors.password}
+          passwordToggle
           placeholder="••••••••"
+          returnKeyType="done"
           secureTextEntry
+          textContentType="password"
           value={password}
-          onChangeText={setPassword}
+          onChangeText={(value) => {
+            clearError('password');
+            setPassword(value);
+          }}
+          onSubmitEditing={handleSubmit}
         />
       </View>
-
-      {fieldError ? (
-        <Text style={[styles.fieldError, { color: theme.colors.error }]}>{fieldError}</Text>
-      ) : null}
 
       <AuthPrimaryButton
         label="Sign in"
         loading={login.isPending}
+        loadingLabel="Signing in…"
         onPress={handleSubmit}
       />
 
@@ -145,8 +170,8 @@ export function LoginScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  field: {
-    gap: 8,
+  passwordField: {
+    gap: 0,
   },
   labelRow: {
     alignItems: 'center',
@@ -154,11 +179,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 8,
   },
-  label: {},
-  link: {},
-  fieldError: {
-    fontSize: 14,
+  passwordLabel: {},
+  forgotLink: {
+    justifyContent: 'center',
+    minHeight: 48,
+    paddingHorizontal: 4,
   },
+  link: {},
   errorBox: {
     borderRadius: 12,
     padding: 12,

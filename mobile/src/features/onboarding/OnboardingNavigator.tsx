@@ -37,12 +37,20 @@ export function OnboardingNavigator({ onComplete }: OnboardingNavigatorProps) {
 
   const skipOnboarding = async () => {
     useOnboardingLaunchStore.getState().setPendingChatLaunch(null);
-    await setOnboardingCompleted(true);
+    try {
+      await setOnboardingCompleted(true);
+    } catch {
+      // Continue even if local persistence fails.
+    }
     onComplete();
   };
 
   const finishOnboarding = async () => {
-    await setOnboardingCompleted(true);
+    try {
+      await setOnboardingCompleted(true);
+    } catch {
+      // Continue even if local persistence fails.
+    }
     onComplete();
   };
 

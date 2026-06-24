@@ -11,6 +11,7 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { ErrorBanner } from '../../collections/components/ErrorBanner';
+import { LoadErrorState } from '../../../components/ui/LoadErrorState';
 import {
   createDefaultDocumentFormValues,
   DocumentFormFields,
@@ -28,7 +29,7 @@ type Props = NativeStackScreenProps<DocumentsStackParamList, 'EditDocument'>;
 export function EditDocumentScreen({ navigation, route }: Props) {
   const { documentId } = route.params;
   const { theme } = useTheme();
-  const { data: document, isLoading } = useDocument(documentId);
+  const { data: document, isLoading, isError, error, refetch, isFetching } = useDocument(documentId);
   const updateDocument = useUpdateDocument(documentId);
   const [values, setValues] = useState<DocumentFormValues | null>(null);
   const [titleError, setTitleError] = useState<string | null>(null);
@@ -91,7 +92,7 @@ export function EditDocumentScreen({ navigation, route }: Props) {
     );
   };
 
-  if (isLoading || !values) {
+  if (isLoading && !values) {
     return (
       <ActivityIndicator
         color={theme.colors.primary}
@@ -99,6 +100,21 @@ export function EditDocumentScreen({ navigation, route }: Props) {
         style={[styles.loader, { backgroundColor: theme.colors.background }]}
       />
     );
+  }
+
+  if ((isError || !document) && !values) {
+    return (
+      <LoadErrorState
+        isRetrying={isFetching}
+        message={getApiErrorMessage(error, 'Could not load this document.')}
+        onRetry={() => void refetch()}
+        onBack={() => navigation.goBack()}
+      />
+    );
+  }
+
+  if (!values) {
+    return null;
   }
 
   return (

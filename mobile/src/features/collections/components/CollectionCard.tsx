@@ -1,7 +1,7 @@
+import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { SafeCollection } from '../../../api/types';
-import { DEFAULT_COLLECTION_COLOR } from '../constants';
 import { CollectionIconDisplay } from './CollectionIconDisplay';
 import { useTheme } from '../../../theme/ThemeProvider';
 
@@ -10,23 +10,22 @@ interface CollectionCardProps {
   onPress: () => void;
 }
 
-export function CollectionCard({ collection, onPress }: CollectionCardProps) {
+export const CollectionCard = memo(function CollectionCard({ collection, onPress }: CollectionCardProps) {
   const { theme } = useTheme();
-  const accentColor = collection.color ?? DEFAULT_COLLECTION_COLOR;
 
   return (
     <Pressable
+      accessibilityLabel={`Open collection ${collection.name}`}
       accessibilityRole="button"
+      hitSlop={4}
       onPress={onPress}
       style={({ pressed }) => [
         styles.card,
-        theme.elevation.soft,
         {
-          backgroundColor: theme.colors.surfaceElevated,
-          borderColor: `${theme.colors.border}AA`,
+          backgroundColor: theme.colors.surface,
+          borderColor: theme.colors.border,
           borderRadius: theme.radii.lg,
           opacity: pressed ? 0.92 : 1,
-          transform: [{ scale: pressed ? 0.99 : 1 }],
         },
       ]}
     >
@@ -34,12 +33,13 @@ export function CollectionCard({ collection, onPress }: CollectionCardProps) {
         style={[
           styles.iconWrap,
           {
-            backgroundColor: `${accentColor}22`,
+            backgroundColor: theme.colors.surfaceSecondary,
+            borderColor: theme.colors.border,
             borderRadius: theme.radii.md,
           },
         ]}
       >
-        <CollectionIconDisplay icon={collection.icon} size={24} />
+        <CollectionIconDisplay color={theme.colors.icon} icon={collection.icon} size={22} />
       </View>
       <View style={styles.textBlock}>
         <Text
@@ -70,10 +70,10 @@ export function CollectionCard({ collection, onPress }: CollectionCardProps) {
           </Text>
         ) : null}
       </View>
-      <View style={[styles.accentDot, { backgroundColor: accentColor }]} />
+      <View style={[styles.accentDot, { backgroundColor: theme.colors.primary }]} />
     </Pressable>
   );
-}
+});
 
 const styles = StyleSheet.create({
   card: {
@@ -88,6 +88,7 @@ const styles = StyleSheet.create({
     height: 48,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
   },
   textBlock: {
     flex: 1,

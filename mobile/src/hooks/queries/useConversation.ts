@@ -67,7 +67,7 @@ export function useSearchConversations(query: string) {
             return cached.filter(
               (conversation) =>
                 conversation.title?.toLowerCase().includes(lowerQuery) ||
-                conversation.preview.toLowerCase().includes(lowerQuery),
+                (conversation.preview ?? '').toLowerCase().includes(lowerQuery),
             );
           }
         }

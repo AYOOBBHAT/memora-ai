@@ -28,6 +28,22 @@ export function CollectionsListScreen({ navigation }: Props) {
     navigation.navigate('CreateCollection');
   }, [navigation]);
 
+  const handleCollectionPress = useCallback(
+    (collectionId: string) => {
+      navigation.navigate('CollectionDetail', { collectionId });
+    },
+    [navigation],
+  );
+
+  const renderCollection = useCallback(
+    ({ item }: { item: (typeof collections)[number] }) => (
+      <CollectionCard collection={item} onPress={() => handleCollectionPress(item.id)} />
+    ),
+    [handleCollectionPress],
+  );
+
+  const collectionKeyExtractor = useCallback((item: (typeof collections)[number]) => item.id, []);
+
   useLayoutEffect(() => {
     navigation.setOptions({
       title: 'Collections',
@@ -84,7 +100,8 @@ export function CollectionsListScreen({ navigation }: Props) {
       <FlatList
         contentContainerStyle={styles.listContent}
         data={collections}
-        keyExtractor={(item) => item.id}
+        keyExtractor={collectionKeyExtractor}
+        maxToRenderPerBatch={8}
         refreshControl={
           <RefreshControl
             refreshing={isRefetching}
@@ -92,12 +109,8 @@ export function CollectionsListScreen({ navigation }: Props) {
             onRefresh={() => void refetch()}
           />
         }
-        renderItem={({ item }) => (
-          <CollectionCard
-            collection={item}
-            onPress={() => navigation.navigate('CollectionDetail', { collectionId: item.id })}
-          />
-        )}
+        renderItem={renderCollection}
+        windowSize={9}
       />
       <Pressable
         accessibilityRole="button"

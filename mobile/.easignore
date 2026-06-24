@@ -80,6 +80,7 @@ yarn-error.*
 *.key
 *.mobileprovision
 *.pem
+google-play-service-account.json
 
 # OS junk
 .DS_Store

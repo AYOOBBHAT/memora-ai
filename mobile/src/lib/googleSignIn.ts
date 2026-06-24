@@ -93,7 +93,11 @@ export function getGoogleSignInErrorMessage(error: unknown): string | null {
       return 'Network error. Check your connection and try again.';
     }
 
-    return message;
+    if (/configured|EXPO_PUBLIC/i.test(message)) {
+      return 'Google Sign-In is not available right now. Please use email and password.';
+    }
+
+    return 'Google sign-in failed. Please try again.';
   }
 
   return 'Google sign-in failed. Please try again.';

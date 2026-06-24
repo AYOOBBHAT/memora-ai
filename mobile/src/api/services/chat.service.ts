@@ -28,6 +28,11 @@ export async function sendChatMessage(input: SendChatMessageInput): Promise<Chat
   if (!data.success || !data.data) {
     throw new Error(data.message || 'Failed to get answer');
   }
+
+  if (!data.data.answer?.trim()) {
+    throw new Error('Memora could not generate a response. Please try again.');
+  }
+
   return data.data;
 }
 
@@ -38,7 +43,7 @@ export async function getConversations(): Promise<ConversationListItem[]> {
   if (!data.success || !data.data) {
     throw new Error(data.message || 'Failed to load conversations');
   }
-  return data.data.conversations;
+  return data.data.conversations ?? [];
 }
 
 export async function getConversation(conversationId: string): Promise<ConversationDetail> {
@@ -48,7 +53,10 @@ export async function getConversation(conversationId: string): Promise<Conversat
   if (!data.success || !data.data) {
     throw new Error(data.message || 'Failed to load conversation');
   }
-  return data.data;
+  return {
+    ...data.data,
+    messages: data.data.messages ?? [],
+  };
 }
 
 export async function searchConversations(query: string): Promise<ConversationListItem[]> {
@@ -58,7 +66,7 @@ export async function searchConversations(query: string): Promise<ConversationLi
   if (!data.success || !data.data) {
     throw new Error(data.message || 'Failed to search conversations');
   }
-  return data.data.conversations;
+  return data.data.conversations ?? [];
 }
 
 export async function deleteConversation(conversationId: string): Promise<void> {

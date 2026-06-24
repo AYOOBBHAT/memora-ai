@@ -3,7 +3,6 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { RecentDocumentItem } from '../../api/types';
 import { formatRelativeTime } from '../../features/documents/utils/formatDocument';
 import { getContinueActivityProgress } from '../../lib/continueReading';
-import { getDocumentVisual } from '../../lib/documentVisuals';
 import { useTheme } from '../../theme/ThemeProvider';
 import { DocumentThumbnail } from './DocumentThumbnail';
 import { SourceBadge } from './SourceBadge';
@@ -15,7 +14,6 @@ interface ContinueReadingCardProps {
 
 export function ContinueReadingCard({ document, onPress }: ContinueReadingCardProps) {
   const { theme } = useTheme();
-  const visual = getDocumentVisual(document.sourceType);
   const viewedAt = document.lastViewedAt ?? document.updatedAt;
   const progress = getContinueActivityProgress(viewedAt);
 
@@ -25,13 +23,11 @@ export function ContinueReadingCard({ document, onPress }: ContinueReadingCardPr
       onPress={onPress}
       style={({ pressed }) => [
         styles.card,
-        theme.elevation.soft,
         {
-          backgroundColor: theme.colors.surfaceElevated,
-          borderColor: `${theme.colors.border}AA`,
+          backgroundColor: theme.colors.surface,
+          borderColor: theme.colors.border,
           borderRadius: theme.radii.lg,
           opacity: pressed ? 0.92 : 1,
-          transform: [{ scale: pressed ? 0.98 : 1 }],
         },
       ]}
     >
@@ -55,7 +51,7 @@ export function ContinueReadingCard({ document, onPress }: ContinueReadingCardPr
           style={[
             styles.progressFill,
             {
-              backgroundColor: visual.accent,
+              backgroundColor: theme.colors.primary,
               borderRadius: theme.radii.full,
               width: `${Math.round(progress * 100)}%`,
             },
@@ -90,9 +86,9 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
   progressTrack: {
-    height: 4,
+    height: 3,
     borderRadius: 999,
-    backgroundColor: 'rgba(148, 163, 184, 0.18)',
+    backgroundColor: 'rgba(255, 239, 179, 0.14)',
     overflow: 'hidden',
   },
   progressFill: {

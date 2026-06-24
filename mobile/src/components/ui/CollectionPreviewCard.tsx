@@ -1,7 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { SafeCollection } from '../../api/types';
-import { DEFAULT_COLLECTION_COLOR } from '../../features/collections/constants';
 import { CollectionIconDisplay } from '../../features/collections/components/CollectionIconDisplay';
 import { formatRelativeTime } from '../../features/documents/utils/formatDocument';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -18,7 +17,6 @@ export function CollectionPreviewCard({
   onPress,
 }: CollectionPreviewCardProps) {
   const { theme } = useTheme();
-  const accentColor = collection.color ?? DEFAULT_COLLECTION_COLOR;
   const countLabel = documentCount === 1 ? '1 document' : `${documentCount} documents`;
 
   return (
@@ -27,35 +25,25 @@ export function CollectionPreviewCard({
       onPress={onPress}
       style={({ pressed }) => [
         styles.card,
-        theme.elevation.soft,
         {
-          backgroundColor: theme.colors.surfaceElevated,
-          borderColor: `${theme.colors.border}AA`,
+          backgroundColor: theme.colors.surface,
+          borderColor: theme.colors.border,
           borderRadius: theme.radii.lg,
           opacity: pressed ? 0.92 : 1,
-          transform: [{ scale: pressed ? 0.98 : 1 }],
         },
       ]}
     >
       <View
         style={[
-          styles.gradient,
-          {
-            backgroundColor: `${accentColor}18`,
-            borderRadius: theme.radii.lg,
-          },
-        ]}
-      />
-      <View
-        style={[
           styles.iconWrap,
           {
-            backgroundColor: `${accentColor}28`,
+            backgroundColor: theme.colors.surfaceSecondary,
+            borderColor: theme.colors.border,
             borderRadius: theme.radii.md,
           },
         ]}
       >
-        <CollectionIconDisplay icon={collection.icon} size={22} />
+        <CollectionIconDisplay color={theme.colors.icon} icon={collection.icon} size={20} />
       </View>
       <Text
         numberOfLines={2}
@@ -92,47 +80,31 @@ export function CollectionPreviewCard({
       >
         Updated {formatRelativeTime(collection.updatedAt).toLowerCase()}
       </Text>
-      <View style={[styles.accentDot, { backgroundColor: accentColor }]} />
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    width: 132,
+    width: 140,
     borderWidth: StyleSheet.hairlineWidth,
-    padding: 14,
-    gap: 4,
+    padding: 16,
+    gap: 6,
     marginRight: 12,
-    overflow: 'hidden',
-  },
-  gradient: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    opacity: 0.55,
   },
   iconWrap: {
-    width: 42,
-    height: 42,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   name: {
-    lineHeight: 18,
+    lineHeight: 20,
+    minHeight: 40,
   },
   meta: {
     lineHeight: 16,
-  },
-  accentDot: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
   },
 });

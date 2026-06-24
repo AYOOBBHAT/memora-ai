@@ -3,7 +3,6 @@ import { useCallback, useEffect, useLayoutEffect } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Linking,
   Pressable,
   ScrollView,
@@ -15,12 +14,13 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { ErrorBanner } from '../../collections/components/ErrorBanner';
+import { SafeRemoteImage } from '../../../components/ui/SafeRemoteImage';
 import { EmbeddingStatusBadge } from '../components/EmbeddingStatusBadge';
 import { formatDocumentContent, formatDocumentDate } from '../utils/formatDocument';
 import { useDeleteDocument } from '../../../hooks/mutations/useDeleteDocument';
 import { useRetryEmbedding } from '../../../hooks/mutations/useRetryEmbedding';
 import { useDocument } from '../../../hooks/queries/useDocuments';
-import { getApiErrorMessage } from '../../../lib/apiError';
+import { getApiErrorMessage, sanitizeBackendMessage } from '../../../lib/apiError';
 import { queryKeys } from '../../../lib/queryClient';
 import type { DocumentsStackParamList } from '../../../navigation/types';
 import { useTheme } from '../../../theme/ThemeProvider';
@@ -82,7 +82,9 @@ export function DocumentDetailScreen({ navigation, route }: Props) {
       return;
     }
 
-    void Linking.openURL(originalUrl);
+    void Linking.openURL(originalUrl).catch(() => {
+      Alert.alert('Could not open link', 'This link could not be opened on your device.');
+    });
   }, [originalUrl]);
 
   useLayoutEffect(() => {
@@ -163,7 +165,12 @@ export function DocumentDetailScreen({ navigation, route }: Props) {
       {document.embeddingStatus === 'failed' ? (
         <View style={styles.bannerWrap}>
           {document.embeddingError ? (
-            <ErrorBanner message={document.embeddingError} />
+            <ErrorBanner
+              message={sanitizeBackendMessage(
+                document.embeddingError,
+                'Embedding failed. You can retry below.',
+              )}
+            />
           ) : (
             <ErrorBanner message="Embedding failed. You can retry below." />
           )}
@@ -226,10 +233,12 @@ export function DocumentDetailScreen({ navigation, route }: Props) {
       </Text>
 
       {thumbnailUrl ? (
-        <Image
+        <SafeRemoteImage
           accessibilityLabel="Video thumbnail"
-          source={{ uri: thumbnailUrl }}
+          containerStyle={styles.thumbnail}
+          fallbackIcon="image-outline"
           style={styles.thumbnail}
+          uri={thumbnailUrl}
         />
       ) : null}
 
@@ -346,7 +355,6 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 16 / 9,
     borderRadius: 12,
-    backgroundColor: '#111827',
   },
   channelName: {},
   sourceLink: {

@@ -47,7 +47,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   setSession: async (accessToken, refreshToken) => {
-    await secureStorage.saveTokens(accessToken, refreshToken);
+    try {
+      await secureStorage.saveTokens(accessToken, refreshToken);
+    } catch {
+      throw new Error('Could not save your sign-in session. Please try again.');
+    }
+
     set({
       accessToken,
       refreshToken,
@@ -61,7 +66,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   clearSession: async () => {
-    await secureStorage.clearTokens();
+    try {
+      await secureStorage.clearTokens();
+    } catch {
+      // Still clear in-memory session if secure storage fails.
+    }
+
     set({
       accessToken: null,
       refreshToken: null,

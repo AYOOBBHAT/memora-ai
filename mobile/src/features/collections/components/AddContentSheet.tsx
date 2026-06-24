@@ -14,59 +14,41 @@ type AddContentFlow = 'pdf' | 'url' | 'youtube' | 'note' | 'ocr';
 
 interface AddContentOption {
   id: AddContentFlow;
-  emoji: string;
   label: string;
   description: string;
   icon: IoniconName;
-  accent: string;
-  background: string;
 }
 
 const OPTIONS: AddContentOption[] = [
   {
     id: 'pdf',
-    emoji: '📄',
     label: 'PDF',
     description: 'Upload and chat with documents',
     icon: 'document-text-outline',
-    accent: '#F87171',
-    background: 'rgba(248, 113, 113, 0.14)',
   },
   {
     id: 'url',
-    emoji: '🌐',
     label: 'Website',
     description: 'Save articles and pages',
     icon: 'globe-outline',
-    accent: '#38BDF8',
-    background: 'rgba(56, 189, 248, 0.14)',
   },
   {
     id: 'youtube',
-    emoji: '▶️',
     label: 'YouTube',
     description: 'Import video transcripts',
     icon: 'logo-youtube',
-    accent: '#EF4444',
-    background: 'rgba(239, 68, 68, 0.14)',
   },
   {
     id: 'note',
-    emoji: '📝',
     label: 'Note',
     description: 'Write a new note',
     icon: 'create-outline',
-    accent: '#A78BFA',
-    background: 'rgba(167, 139, 250, 0.14)',
   },
   {
     id: 'ocr',
-    emoji: '🖼',
     label: 'Image OCR',
     description: 'Extract text from images',
     icon: 'image-outline',
-    accent: '#34D399',
-    background: 'rgba(52, 211, 153, 0.14)',
   },
 ];
 
@@ -104,10 +86,7 @@ export function AddContentSheet({
     }
 
     if (optionId === 'ocr') {
-      Alert.alert(
-        'Coming soon',
-        'Image OCR will be available in a future Memora update.',
-      );
+      Alert.alert('Coming soon', 'Image OCR will be available in a future update.');
       return;
     }
 
@@ -143,12 +122,12 @@ export function AddContentSheet({
             onPress={() => onFlowChange(null)}
             style={({ pressed }) => [styles.backRow, { opacity: pressed ? 0.7 : 1 }]}
           >
-            <Ionicons color={theme.colors.primary} name="chevron-back" size={18} />
+            <Ionicons color={theme.colors.text} name="chevron-back" size={18} />
             <Text
               style={[
                 styles.backText,
                 {
-                  color: theme.colors.primary,
+                  color: theme.colors.text,
                   fontSize: theme.typography.fontSizes.sm,
                   fontWeight: theme.typography.fontWeights.medium,
                 },
@@ -195,8 +174,8 @@ export function AddContentSheet({
               style={({ pressed }) => [
                 styles.optionRow,
                 {
-                  backgroundColor: theme.colors.surfaceSecondary,
-                  borderColor: `${theme.colors.border}CC`,
+                  backgroundColor: theme.colors.surface,
+                  borderColor: theme.colors.border,
                   borderRadius: theme.radii.lg,
                   opacity: pressed ? 0.9 : 1,
                 },
@@ -206,12 +185,13 @@ export function AddContentSheet({
                 style={[
                   styles.optionIcon,
                   {
-                    backgroundColor: option.background,
+                    backgroundColor: theme.colors.surfaceSecondary,
+                    borderColor: theme.colors.border,
                     borderRadius: theme.radii.md,
                   },
                 ]}
               >
-                <Text style={styles.optionEmoji}>{option.emoji}</Text>
+                <Ionicons color={theme.colors.icon} name={option.icon} size={20} />
               </View>
               <View style={styles.optionText}>
                 <Text
@@ -262,12 +242,10 @@ const styles = StyleSheet.create({
   },
   optionIcon: {
     alignItems: 'center',
-    height: 48,
+    borderWidth: StyleSheet.hairlineWidth,
+    height: 44,
     justifyContent: 'center',
-    width: 48,
-  },
-  optionEmoji: {
-    fontSize: 22,
+    width: 44,
   },
   optionText: {
     flex: 1,
@@ -285,7 +263,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     gap: 4,
-    marginBottom: 4,
   },
   backText: {},
 });

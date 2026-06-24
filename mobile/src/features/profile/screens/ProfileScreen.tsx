@@ -15,6 +15,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { env } from '../../../config/env';
 import { BottomSheet } from '../../../components/ui/BottomSheet';
+import { LoadErrorState } from '../../../components/ui/LoadErrorState';
+import { ChangePasswordForm } from '../../auth/components/ChangePasswordForm';
+import { AuthFormScrollContext } from '../../auth/components/AuthFormScrollContext';
 import { useAuthMe } from '../../../hooks/queries/useAuthMe';
 import { useCollections } from '../../../hooks/queries/useCollections';
 import { useConversations } from '../../../hooks/queries/useConversations';
@@ -80,7 +83,7 @@ export function ProfileScreen() {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
 
-  const { data: user, isLoading: isUserLoading } = useAuthMe();
+  const { data: user, isLoading: isUserLoading, isError: isUserError, error: userError, refetch: refetchUser, isFetching: isUserFetching } = useAuthMe();
   const { data: documents = [], isLoading: isDocumentsLoading } = useDocuments();
   const { data: collections = [], isLoading: isCollectionsLoading } = useCollections();
   const { data: conversations = [], isLoading: isChatsLoading } = useConversations();
@@ -297,6 +300,13 @@ export function ProfileScreen() {
               ))}
             </View>
           </View>
+        ) : isUserError ? (
+          <LoadErrorState
+            compact
+            isRetrying={isUserFetching}
+            message={getApiErrorMessage(userError, 'Could not load your profile. Check your connection and try again.')}
+            onRetry={() => void refetchUser()}
+          />
         ) : (
           <Text
             style={[
@@ -448,42 +458,15 @@ export function ProfileScreen() {
         visible={isChangePasswordOpen}
         onClose={() => setIsChangePasswordOpen(false)}
       >
-        <View
-          style={[
-            styles.placeholderCard,
-            {
-              backgroundColor: theme.colors.surfaceSecondary,
-              borderColor: theme.colors.border,
-              borderRadius: theme.radii.lg,
-            },
-          ]}
-        >
-          <Ionicons color={theme.colors.primary} name="lock-closed-outline" size={28} />
-          <Text
-            style={[
-              styles.placeholderTitle,
-              {
-                color: theme.colors.text,
-                fontSize: theme.typography.fontSizes.md,
-                fontWeight: theme.typography.fontWeights.semibold,
-              },
-            ]}
-          >
-            Coming soon
-          </Text>
-          <Text
-            style={[
-              styles.placeholderBody,
-              {
-                color: theme.colors.textSecondary,
-                fontSize: theme.typography.fontSizes.sm,
-                lineHeight: 20,
-              },
-            ]}
-          >
-            This feature will be available soon.
-          </Text>
-        </View>
+        <AuthFormScrollContext.Provider value={{ scrollToInput: () => {} }}>
+          <ChangePasswordForm
+            infoMessage="Password changes will be available in a future update."
+            onSubmit={() => {
+              setIsChangePasswordOpen(false);
+            }}
+            submitLabel="Update password"
+          />
+        </AuthFormScrollContext.Provider>
       </BottomSheet>
     </>
   );

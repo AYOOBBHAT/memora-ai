@@ -7,6 +7,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { AppErrorBoundary } from '../components/ui/AppErrorBoundary';
 import { setupInterceptors } from '../api/interceptors';
 import { configureGoogleSignIn } from '../lib/googleSignIn';
 import { queryClient } from '../lib/queryClient';
@@ -51,9 +52,11 @@ export function AppProviders({ children }: AppProvidersProps) {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <AuthGate>
-          <NavigationShell>{children}</NavigationShell>
-        </AuthGate>
+        <AppErrorBoundary>
+          <AuthGate>
+            <NavigationShell>{children}</NavigationShell>
+          </AuthGate>
+        </AppErrorBoundary>
       </ThemeProvider>
     </QueryClientProvider>
   );

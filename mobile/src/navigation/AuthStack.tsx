@@ -32,7 +32,7 @@ export function AuthStack() {
 
       screenOptions={{
 
-        headerStyle: { backgroundColor: theme.colors.surface },
+        headerStyle: { backgroundColor: theme.colors.background },
 
         headerTintColor: theme.colors.text,
 

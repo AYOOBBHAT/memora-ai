@@ -1,5 +1,6 @@
-import { AppTheme, palette, radii, spacing, typography, elevation } from './tokens';
+import { AppTheme, brand, radii, spacing, typography, elevation } from './tokens';
 
+/** Primary Memora experience — deep green editorial. */
 export const darkTheme: AppTheme = {
   dark: true,
   spacing,
@@ -7,19 +8,23 @@ export const darkTheme: AppTheme = {
   elevation,
   typography,
   colors: {
-    background: palette.slate950,
-    surface: palette.slate900,
-    surfaceSecondary: palette.slate800,
-    surfaceElevated: '#162033',
-    text: palette.slate50,
-    textSecondary: palette.slate400,
-    border: palette.slate700,
-    primary: palette.indigo500,
-    primaryText: palette.white,
-    error: palette.red500,
-    tabBar: palette.slate900,
-    tabBarBorder: palette.slate800,
-    tabBarActive: palette.indigo400,
-    tabBarInactive: palette.slate500,
+    background: brand.green,
+    surface: brand.greenSurface,
+    surfaceSecondary: brand.greenMuted,
+    surfaceElevated: brand.greenCard,
+    text: brand.butter,
+    textSecondary: brand.butterMuted,
+    border: brand.greenBorder,
+    primary: brand.butter,
+    primaryText: brand.green,
+    error: brand.error,
+    tabBar: brand.green,
+    tabBarBorder: brand.greenBorder,
+    tabBarActive: brand.butter,
+    tabBarInactive: brand.butterMuted,
+    userBubble: brand.butter,
+    userBubbleText: brand.green,
+    aiSurface: brand.greenCard,
+    icon: brand.butter,
   },
 };

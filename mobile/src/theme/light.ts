@@ -1,5 +1,6 @@
-import { AppTheme, palette, radii, spacing, typography, elevation } from './tokens';
+import { AppTheme, brand, radii, spacing, typography, elevation } from './tokens';
 
+/** Inverted editorial — cream workspace with green typography. */
 export const lightTheme: AppTheme = {
   dark: false,
   spacing,
@@ -7,19 +8,23 @@ export const lightTheme: AppTheme = {
   elevation,
   typography,
   colors: {
-    background: palette.slate50,
-    surface: palette.white,
-    surfaceSecondary: palette.slate100,
-    surfaceElevated: palette.white,
-    text: palette.slate900,
-    textSecondary: palette.slate500,
-    border: palette.slate200,
-    primary: palette.indigo600,
-    primaryText: palette.white,
-    error: palette.red500,
-    tabBar: palette.white,
-    tabBarBorder: palette.slate200,
-    tabBarActive: palette.indigo600,
-    tabBarInactive: palette.slate400,
+    background: brand.butter,
+    surface: '#F7E8A8',
+    surfaceSecondary: '#F0DE98',
+    surfaceElevated: '#FFFFFF',
+    text: brand.green,
+    textSecondary: 'rgba(1, 62, 55, 0.62)',
+    border: 'rgba(1, 62, 55, 0.12)',
+    primary: brand.green,
+    primaryText: brand.butter,
+    error: '#C45C52',
+    tabBar: brand.butter,
+    tabBarBorder: 'rgba(1, 62, 55, 0.12)',
+    tabBarActive: brand.green,
+    tabBarInactive: 'rgba(1, 62, 55, 0.45)',
+    userBubble: brand.green,
+    userBubbleText: brand.butter,
+    aiSurface: '#FFFFFF',
+    icon: brand.green,
   },
 };

@@ -21,17 +21,15 @@ export function SearchBarButton({
       onPress={onPress}
       style={({ pressed }) => [
         styles.container,
-        theme.elevation.soft,
         {
-          backgroundColor: theme.colors.surfaceElevated,
-          borderColor: `${theme.colors.border}99`,
+          backgroundColor: theme.colors.surface,
+          borderColor: theme.colors.border,
           borderRadius: theme.radii.xl,
           opacity: pressed ? 0.92 : 1,
-          transform: [{ scale: pressed ? 0.995 : 1 }],
         },
       ]}
     >
-      <Ionicons color={theme.colors.primary} name="search" size={20} />
+      <Ionicons color={theme.colors.icon} name="search" size={20} />
       <Text
         numberOfLines={1}
         style={[

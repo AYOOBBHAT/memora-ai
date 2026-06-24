@@ -21,13 +21,11 @@ export function CompactDocumentCard({ document, onPress }: CompactDocumentCardPr
       onPress={onPress}
       style={({ pressed }) => [
         styles.card,
-        theme.elevation.soft,
         {
-          backgroundColor: theme.colors.surfaceElevated,
-          borderColor: `${theme.colors.border}AA`,
-          borderRadius: theme.radii.md,
+          backgroundColor: theme.colors.surface,
+          borderColor: theme.colors.border,
+          borderRadius: theme.radii.lg,
           opacity: onPress && pressed ? 0.9 : 1,
-          transform: [{ scale: onPress && pressed ? 0.99 : 1 }],
         },
       ]}
     >

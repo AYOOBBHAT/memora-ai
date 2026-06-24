@@ -12,6 +12,7 @@ interface ChatInputProps {
   placeholder?: string;
   onFocus?: () => void;
   onBlur?: () => void;
+  bottomInset?: number;
 }
 
 export const ChatInput = forwardRef<TextInputType, ChatInputProps>(function ChatInput(
@@ -20,9 +21,10 @@ export const ChatInput = forwardRef<TextInputType, ChatInputProps>(function Chat
     onChangeText,
     onSend,
     disabled = false,
-    placeholder = 'Ask Memora anything...',
+    placeholder = 'Ask about your notes…',
     onFocus,
     onBlur,
+    bottomInset = 0,
   },
   ref,
 ) {
@@ -34,85 +36,96 @@ export const ChatInput = forwardRef<TextInputType, ChatInputProps>(function Chat
     <View
       style={[
         styles.container,
-        theme.elevation.soft,
         {
-          backgroundColor: theme.colors.surface,
+          backgroundColor: theme.colors.background,
           borderTopColor: theme.colors.border,
+          paddingBottom: 12 + bottomInset,
         },
       ]}
     >
-      <TextInput
-        ref={ref}
-        accessibilityLabel="Chat message input"
-        editable={!disabled}
-        multiline
-        onBlur={onBlur}
-        onChangeText={onChangeText}
-        onFocus={onFocus}
-        placeholder={placeholder}
-        placeholderTextColor={theme.colors.textSecondary}
+      <View
         style={[
-          styles.input,
+          styles.inputRow,
           {
-            backgroundColor: theme.colors.surfaceElevated,
+            backgroundColor: theme.colors.surface,
             borderColor: theme.colors.border,
-            color: theme.colors.text,
-            fontSize: theme.typography.fontSizes.md,
-          },
-        ]}
-        value={value}
-      />
-      <Pressable
-        accessibilityLabel="Send message"
-        accessibilityRole="button"
-        accessibilityState={{ disabled: !canSend }}
-        disabled={!canSend}
-        onPress={onSend}
-        style={({ pressed }) => [
-          styles.sendButton,
-          theme.elevation.soft,
-          {
-            backgroundColor: canSend ? theme.colors.primary : theme.colors.surfaceSecondary,
-            opacity: pressed && canSend ? 0.88 : 1,
-            transform: [{ scale: pressed && canSend ? 0.94 : 1 }],
+            borderRadius: theme.radii.xl,
           },
         ]}
       >
-        <Ionicons
-          color={canSend ? theme.colors.primaryText : theme.colors.textSecondary}
-          name="arrow-up"
-          size={20}
+        <TextInput
+          ref={ref}
+          accessibilityLabel="Chat message input"
+          editable={!disabled}
+          multiline
+          onBlur={onBlur}
+          onChangeText={onChangeText}
+          onFocus={onFocus}
+          placeholder={placeholder}
+          placeholderTextColor={theme.colors.textSecondary}
+          style={[
+            styles.input,
+            {
+              color: theme.colors.text,
+              fontSize: theme.typography.fontSizes.md,
+            },
+          ]}
+          value={value}
         />
-      </Pressable>
+        <Pressable
+          accessibilityLabel="Send message"
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !canSend }}
+          disabled={!canSend}
+          hitSlop={8}
+          onPress={onSend}
+          style={({ pressed }) => [
+            styles.sendButton,
+            {
+              backgroundColor: canSend ? theme.colors.primary : theme.colors.surfaceSecondary,
+              borderRadius: theme.radii.full,
+              opacity: pressed && canSend ? 0.88 : 1,
+            },
+          ]}
+        >
+          <Ionicons
+            color={canSend ? theme.colors.primaryText : theme.colors.textSecondary}
+            name="arrow-up"
+            size={20}
+          />
+        </Pressable>
+      </View>
     </View>
   );
 });
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: 'flex-end',
     borderTopWidth: StyleSheet.hairlineWidth,
-    flexDirection: 'row',
-    gap: 10,
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 14,
+  },
+  inputRow: {
+    alignItems: 'flex-end',
+    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    gap: 8,
+    minHeight: 52,
+    paddingHorizontal: 6,
+    paddingVertical: 6,
   },
   input: {
-    borderRadius: 24,
-    borderWidth: 1,
     flex: 1,
     maxHeight: 120,
-    minHeight: 48,
-    paddingHorizontal: 18,
-    paddingTop: 12,
-    paddingBottom: 12,
+    minHeight: 40,
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 10,
   },
   sendButton: {
     alignItems: 'center',
-    borderRadius: 24,
-    height: 48,
+    height: 40,
     justifyContent: 'center',
-    width: 48,
+    width: 40,
   },
 });

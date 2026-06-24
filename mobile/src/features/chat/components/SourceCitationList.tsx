@@ -1,6 +1,9 @@
+import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import type { ChatCitationSource } from '../../../api/types';
+import { useCollections } from '../../../hooks/queries/useCollections';
+import { useDocuments } from '../../../hooks/queries/useDocuments';
 import { useTheme } from '../../../theme/ThemeProvider';
 
 import { SourceCard } from './SourceCard';
@@ -12,6 +15,26 @@ interface SourceCitationListProps {
 
 export function SourceCitationList({ sources, onSourcePress }: SourceCitationListProps) {
   const { theme } = useTheme();
+  const { data: collections = [] } = useCollections();
+  const { data: documents = [] } = useDocuments();
+
+  const collectionNameByDocumentId = useMemo(() => {
+    const collectionById = new Map(collections.map((collection) => [collection.id, collection.name]));
+    const names = new Map<string, string>();
+
+    for (const document of documents) {
+      if (!document.collectionId) {
+        continue;
+      }
+
+      const name = collectionById.get(document.collectionId);
+      if (name) {
+        names.set(document.id, name);
+      }
+    }
+
+    return names;
+  }, [collections, documents]);
 
   if (sources.length === 0) {
     return null;
@@ -34,6 +57,7 @@ export function SourceCitationList({ sources, onSourcePress }: SourceCitationLis
       {sources.map((source) => (
         <SourceCard
           key={`${source.documentId}-${source.score}`}
+          collectionName={collectionNameByDocumentId.get(source.documentId)}
           onPress={() => onSourcePress(source)}
           source={source}
         />

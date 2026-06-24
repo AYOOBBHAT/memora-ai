@@ -5,6 +5,7 @@ import { clearChatCache } from '../../lib/chatCache';
 import { queryKeys } from '../../lib/queryClient';
 import { useAuthStore } from '../../stores/auth.store';
 import { useChatStore } from '../../stores/chat.store';
+import { useShareStore } from '../../stores/share.store';
 
 export function useLogout() {
   const clearSession = useAuthStore((state) => state.clearSession);
@@ -18,9 +19,13 @@ export function useLogout() {
       } finally {
         await clearSession();
         useChatStore.getState().startNewChat();
+        useShareStore.getState().clearPendingShare();
         await clearChatCache();
         queryClient.removeQueries({ queryKey: queryKeys.auth.all });
         queryClient.removeQueries({ queryKey: queryKeys.chat.all });
+        queryClient.removeQueries({ queryKey: queryKeys.documents.all });
+        queryClient.removeQueries({ queryKey: queryKeys.collections.all });
+        queryClient.removeQueries({ queryKey: queryKeys.search.all });
       }
     },
   });

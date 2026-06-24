@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import type { ComponentProps } from 'react';
+import { StyleSheet } from 'react-native';
 
 import { ChatStack } from './ChatStack';
 import { ProfileScreen } from '../features/profile/screens/ProfileScreen';
@@ -27,11 +28,12 @@ export function MainTabs() {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        headerStyle: { backgroundColor: theme.colors.surface },
+        headerStyle: { backgroundColor: theme.colors.background },
         headerTintColor: theme.colors.text,
         tabBarStyle: {
           backgroundColor: theme.colors.tabBar,
           borderTopColor: theme.colors.tabBarBorder,
+          borderTopWidth: StyleSheet.hairlineWidth,
         },
         tabBarActiveTintColor: theme.colors.tabBarActive,
         tabBarInactiveTintColor: theme.colors.tabBarInactive,
@@ -52,7 +54,11 @@ export function MainTabs() {
         component={CollectionsStack}
         options={{ headerShown: false }}
       />
-      <Tab.Screen name="Chat" component={ChatStack} options={{ headerShown: false }} />
+      <Tab.Screen
+        name="Chat"
+        component={ChatStack}
+        options={{ headerShown: false, tabBarHideOnKeyboard: true }}
+      />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );

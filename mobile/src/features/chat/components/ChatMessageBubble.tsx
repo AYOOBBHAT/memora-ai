@@ -29,7 +29,7 @@ function formatMessageTime(isoDate: string): string {
 function ChatMessageBubbleComponent({ message, onSourcePress }: ChatMessageBubbleProps) {
   const { theme } = useTheme();
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(8)).current;
+  const slideAnim = useRef(new Animated.Value(6)).current;
   const isUser = message.role === 'user';
   const isError = Boolean(message.error);
 
@@ -37,18 +37,17 @@ function ChatMessageBubbleComponent({ message, onSourcePress }: ChatMessageBubbl
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 200,
+        duration: 180,
         useNativeDriver: true,
       }),
       Animated.timing(slideAnim, {
         toValue: 0,
-        duration: 200,
+        duration: 180,
         useNativeDriver: true,
       }),
     ]).start();
   }, [fadeAnim, slideAnim]);
 
-  const textColor = isUser ? theme.colors.primaryText : isError ? theme.colors.error : theme.colors.text;
   const timeLabel = formatMessageTime(message.createdAt);
 
   if (isUser) {
@@ -66,11 +65,9 @@ function ChatMessageBubbleComponent({ message, onSourcePress }: ChatMessageBubbl
           <View
             style={[
               styles.userBubble,
-              theme.elevation.soft,
               {
-                backgroundColor: theme.colors.primary,
-                borderBottomRightRadius: 6,
-                borderRadius: 20,
+                backgroundColor: theme.colors.userBubble,
+                borderRadius: theme.radii.lg,
               },
             ]}
           >
@@ -78,8 +75,9 @@ function ChatMessageBubbleComponent({ message, onSourcePress }: ChatMessageBubbl
               style={[
                 styles.userText,
                 {
-                  color: theme.colors.primaryText,
+                  color: theme.colors.userBubbleText,
                   fontSize: theme.typography.fontSizes.md,
+                  lineHeight: 24,
                 },
               ]}
             >
@@ -114,25 +112,25 @@ function ChatMessageBubbleComponent({ message, onSourcePress }: ChatMessageBubbl
         },
       ]}
     >
-      <View
-        style={[
-          styles.avatar,
-          {
-            backgroundColor: `${theme.colors.primary}18`,
-            borderRadius: theme.radii.full,
-          },
-        ]}
-      >
-        <Ionicons color={theme.colors.primary} name="sparkles" size={16} />
-      </View>
       <View style={styles.assistantColumn}>
+        <Text
+          style={[
+            styles.assistantLabel,
+            {
+              color: theme.colors.textSecondary,
+              fontSize: theme.typography.fontSizes.xs,
+              fontWeight: theme.typography.fontWeights.medium,
+            },
+          ]}
+        >
+          Memora
+        </Text>
         <View
           style={[
             styles.assistantBubble,
-            theme.elevation.soft,
             {
-              backgroundColor: theme.colors.surfaceElevated,
-              borderColor: isError ? `${theme.colors.error}55` : `${theme.colors.border}AA`,
+              backgroundColor: theme.colors.aiSurface,
+              borderColor: isError ? theme.colors.error : theme.colors.border,
               borderRadius: theme.radii.lg,
             },
           ]}
@@ -144,13 +142,18 @@ function ChatMessageBubbleComponent({ message, onSourcePress }: ChatMessageBubbl
                 {
                   color: theme.colors.error,
                   fontSize: theme.typography.fontSizes.md,
+                  lineHeight: 24,
                 },
               ]}
             >
               {message.content}
             </Text>
           ) : (
-            <ChatMarkdown content={message.content} isError={isError} textColor={textColor} />
+            <ChatMarkdown
+              content={message.content}
+              isError={isError}
+              textColor={theme.colors.text}
+            />
           )}
           {message.sources && message.sources.length > 0 ? (
             <SourceCitationList onSourcePress={onSourcePress} sources={message.sources} />
@@ -186,48 +189,38 @@ export const ChatMessageBubble = memo(
 const styles = StyleSheet.create({
   rowUser: {
     alignItems: 'flex-end',
-    marginBottom: 14,
-    paddingHorizontal: 16,
+    marginBottom: 20,
+    paddingHorizontal: 20,
   },
   rowAssistant: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 14,
-    paddingHorizontal: 16,
+    marginBottom: 24,
+    paddingHorizontal: 20,
   },
   userColumn: {
     alignItems: 'flex-end',
-    gap: 4,
-    maxWidth: '78%',
+    gap: 6,
+    maxWidth: '82%',
   },
   userBubble: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
   },
-  userText: {
-    lineHeight: 22,
-  },
+  userText: {},
   assistantColumn: {
-    flex: 1,
-    gap: 4,
-    maxWidth: '92%',
+    gap: 8,
+    maxWidth: '100%',
   },
-  avatar: {
-    alignItems: 'center',
-    height: 32,
-    justifyContent: 'center',
-    marginTop: 4,
-    width: 32,
+  assistantLabel: {
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
   },
   assistantBubble: {
     borderWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
   },
-  errorText: {
-    lineHeight: 22,
-  },
+  errorText: {},
   timestamp: {
-    paddingHorizontal: 4,
+    paddingHorizontal: 2,
   },
 });

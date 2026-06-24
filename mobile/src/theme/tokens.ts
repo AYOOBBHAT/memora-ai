@@ -1,21 +1,16 @@
-export const palette = {
-  white: '#FFFFFF',
-  black: '#000000',
-  slate50: '#F8FAFC',
-  slate100: '#F1F5F9',
-  slate200: '#E2E8F0',
-  slate300: '#CBD5E1',
-  slate400: '#94A3B8',
-  slate500: '#64748B',
-  slate600: '#475569',
-  slate700: '#334155',
-  slate800: '#1E293B',
-  slate900: '#0F172A',
-  slate950: '#020617',
-  indigo400: '#818CF8',
-  indigo500: '#6366F1',
-  indigo600: '#4F46E5',
-  red500: '#EF4444',
+/** Memora editorial palette — premium green & butter cream. */
+export const brand = {
+  green: '#013E37',
+  greenSurface: '#024940',
+  greenMuted: '#035049',
+  greenCard: '#045A52',
+  greenBorder: 'rgba(255, 239, 179, 0.14)',
+  butter: '#FFEFB3',
+  butterMuted: 'rgba(255, 239, 179, 0.62)',
+  butterSubtle: 'rgba(255, 239, 179, 0.10)',
+  butterSoft: 'rgba(255, 239, 179, 0.18)',
+  error: '#E8847A',
+  errorMuted: 'rgba(232, 132, 122, 0.85)',
 } as const;
 
 export const spacing = {
@@ -30,25 +25,26 @@ export const spacing = {
 export const radii = {
   sm: 10,
   md: 14,
-  lg: 16,
+  lg: 18,
   xl: 20,
   full: 999,
 } as const;
 
+/** Minimal elevation — editorial, no glow. */
 export const elevation = {
   soft: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.14,
-    shadowRadius: 10,
-    elevation: 3,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 1,
   },
   fab: {
-    shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 14,
-    elevation: 8,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
   },
 } as const;
 
@@ -57,9 +53,9 @@ export const typography = {
     xs: 12,
     sm: 14,
     md: 16,
-    lg: 18,
-    xl: 24,
-    xxl: 32,
+    lg: 20,
+    xl: 28,
+    xxl: 34,
   },
   fontWeights: {
     regular: '400' as const,
@@ -93,6 +89,14 @@ export interface ThemeColors {
   tabBarBorder: string;
   tabBarActive: string;
   tabBarInactive: string;
+  /** User chat bubble background */
+  userBubble: string;
+  /** User chat bubble text */
+  userBubbleText: string;
+  /** AI chat surface */
+  aiSurface: string;
+  /** Icon tint on cards */
+  icon: string;
 }
 
 export interface AppTheme {

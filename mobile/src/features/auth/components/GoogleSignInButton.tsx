@@ -86,21 +86,19 @@ export function GoogleSignInButton({ onError }: GoogleSignInButtonProps) {
         onPress={() => void handlePress()}
         style={({ pressed }) => [
           styles.button,
-          theme.elevation.soft,
           {
-            backgroundColor: theme.colors.surfaceElevated,
-            borderColor: `${theme.colors.border}CC`,
+            backgroundColor: 'transparent',
+            borderColor: theme.colors.border,
             borderRadius: theme.radii.lg,
             opacity: pressed || isLoading ? 0.9 : 1,
-            transform: [{ scale: pressed && !isLoading ? 0.99 : 1 }],
           },
         ]}
       >
         {isLoading ? (
-          <ActivityIndicator color={theme.colors.primary} />
+          <ActivityIndicator color={theme.colors.text} />
         ) : (
           <View style={styles.buttonContent}>
-            <Ionicons color="#4285F4" name="logo-google" size={20} />
+            <Ionicons color={theme.colors.icon} name="logo-google" size={20} />
             <Text
               style={[
                 styles.buttonText,

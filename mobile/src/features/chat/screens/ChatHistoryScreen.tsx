@@ -43,6 +43,7 @@ export function ChatHistoryScreen({ navigation }: Props) {
 
   const setActiveConversation = useChatStore((state) => state.setActiveConversation);
   const deleteConversation = useDeleteConversation();
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const conversationsQuery = useConversations();
   const searchQuery = useSearchConversations(query);
@@ -83,12 +84,18 @@ export function ChatHistoryScreen({ navigation }: Props) {
             text: 'Delete',
             style: 'destructive',
             onPress: () => {
+              setDeleteError(null);
               deleteConversation.mutate(conversation.id, {
                 onSuccess: () => {
                   const activeConversationId = useChatStore.getState().conversationId;
                   if (activeConversationId === conversation.id) {
                     useChatStore.getState().startNewChat();
                   }
+                },
+                onError: (error) => {
+                  setDeleteError(
+                    getApiErrorMessage(error, 'Could not delete this conversation. Please try again.'),
+                  );
                 },
               });
             },
@@ -98,6 +105,8 @@ export function ChatHistoryScreen({ navigation }: Props) {
     },
     [deleteConversation],
   );
+
+  const conversationKeyExtractor = useCallback((item: ConversationListItem) => item.id, []);
 
   const renderItem = useCallback(
     ({ item }: { item: ConversationListItem }) => (
@@ -167,6 +176,10 @@ export function ChatHistoryScreen({ navigation }: Props) {
         ) : null}
       </View>
 
+      {deleteError ? (
+        <ErrorBanner message={deleteError} onRetry={() => setDeleteError(null)} />
+      ) : null}
+
       {isOffline ? (
         <View style={styles.bannerWrap}>
           <ErrorBanner message="Offline — showing cached conversations" />
@@ -216,7 +229,9 @@ export function ChatHistoryScreen({ navigation }: Props) {
         <FlatList
           contentContainerStyle={styles.listContent}
           data={conversations}
-          keyExtractor={(item) => item.id}
+          initialNumToRender={12}
+          keyExtractor={conversationKeyExtractor}
+          maxToRenderPerBatch={10}
           refreshControl={
             <RefreshControl
               colors={[theme.colors.primary]}
@@ -226,6 +241,7 @@ export function ChatHistoryScreen({ navigation }: Props) {
             />
           }
           renderItem={renderItem}
+          windowSize={11}
         />
       ) : null}
 

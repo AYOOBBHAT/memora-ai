@@ -16,7 +16,7 @@ export function ChatStack() {
     <Stack.Navigator
       screenOptions={{
         headerStyle: {
-          backgroundColor: theme.colors.surface,
+          backgroundColor: theme.colors.background,
           ...(Platform.OS === 'android' ? { height: 56 } : undefined),
         },
         headerTintColor: theme.colors.text,

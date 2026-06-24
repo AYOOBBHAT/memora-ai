@@ -3,14 +3,14 @@ import { Animated, StyleSheet, View } from 'react-native';
 
 import { useTheme } from '../../../theme/ThemeProvider';
 
-const DOT_SIZE = 7;
-const ANIM_MS = 400;
+const DOT_SIZE = 6;
+const ANIM_MS = 450;
 
 export function TypingIndicator() {
   const { theme } = useTheme();
-  const dot1 = useRef(new Animated.Value(0.35)).current;
-  const dot2 = useRef(new Animated.Value(0.35)).current;
-  const dot3 = useRef(new Animated.Value(0.35)).current;
+  const dot1 = useRef(new Animated.Value(0.3)).current;
+  const dot2 = useRef(new Animated.Value(0.3)).current;
+  const dot3 = useRef(new Animated.Value(0.3)).current;
 
   useEffect(() => {
     const animateDot = (dot: Animated.Value, delay: number) =>
@@ -23,7 +23,7 @@ export function TypingIndicator() {
             useNativeDriver: true,
           }),
           Animated.timing(dot, {
-            toValue: 0.35,
+            toValue: 0.3,
             duration: ANIM_MS,
             useNativeDriver: true,
           }),
@@ -31,8 +31,8 @@ export function TypingIndicator() {
       );
 
     const a1 = animateDot(dot1, 0);
-    const a2 = animateDot(dot2, 130);
-    const a3 = animateDot(dot3, 260);
+    const a2 = animateDot(dot2, 150);
+    const a3 = animateDot(dot3, 300);
 
     a1.start();
     a2.start();
@@ -55,16 +55,8 @@ export function TypingIndicator() {
           style={[
             styles.dot,
             {
-              backgroundColor: theme.colors.primary,
+              backgroundColor: theme.colors.textSecondary,
               opacity: dot,
-              transform: [
-                {
-                  scale: dot.interpolate({
-                    inputRange: [0.35, 1],
-                    outputRange: [0.85, 1.1],
-                  }),
-                },
-              ],
             },
           ]}
         />
@@ -77,8 +69,8 @@ const styles = StyleSheet.create({
   row: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 5,
-    paddingVertical: 2,
+    gap: 6,
+    paddingVertical: 4,
   },
   dot: {
     borderRadius: DOT_SIZE / 2,

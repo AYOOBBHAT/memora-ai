@@ -20,7 +20,7 @@ function unwrapData<T>(response: ApiResponse<T>, fallback: string): T {
 export async function getCollections(): Promise<SafeCollection[]> {
   const { data } = await apiClient.get<ApiResponse<{ collections: SafeCollection[] }>>('/collections');
   const payload = unwrapData(data, 'Failed to load collections');
-  return payload.collections;
+  return payload.collections ?? [];
 }
 
 export async function getCollection(id: string): Promise<SafeCollection> {
@@ -53,7 +53,7 @@ export async function getCollectionDocuments(id: string): Promise<SafeDocument[]
     `/collections/${id}/documents`,
   );
   const payload = unwrapData(data, 'Failed to load collection documents');
-  return payload.documents;
+  return payload.documents ?? [];
 }
 
 export async function assignDocumentToCollection(

@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+
+import { brand } from '../../../theme/tokens';
 
 import { useTheme } from '../../../theme/ThemeProvider';
 import { ChatCodeBlock } from './ChatCodeBlock';
@@ -138,7 +140,7 @@ function renderInlineText(text: string, textColor: string, keyPrefix: string) {
           key={`${keyPrefix}-c-${partIndex++}`}
           style={{
             fontFamily: 'monospace',
-            backgroundColor: 'rgba(99, 102, 241, 0.12)',
+            backgroundColor: brand.butterSubtle,
             borderRadius: 4,
             paddingHorizontal: 4,
           }}
@@ -171,7 +173,7 @@ function renderInlineText(text: string, textColor: string, keyPrefix: string) {
   );
 }
 
-export function ChatMarkdown({ content, textColor, isError }: ChatMarkdownProps) {
+export const ChatMarkdown = memo(function ChatMarkdown({ content, textColor, isError }: ChatMarkdownProps) {
   const { theme } = useTheme();
   const blocks = useMemo(() => parseMarkdownBlocks(content), [content]);
 
@@ -256,7 +258,7 @@ export function ChatMarkdown({ content, textColor, isError }: ChatMarkdownProps)
       })}
     </View>
   );
-}
+});
 
 function ScrollViewHorizontalTable({
   rows,

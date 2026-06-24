@@ -17,7 +17,7 @@ export function CollectionsStack() {
     <Stack.Navigator
       initialRouteName="CollectionsList"
       screenOptions={{
-        headerStyle: { backgroundColor: theme.colors.surface },
+        headerStyle: { backgroundColor: theme.colors.background },
         headerTintColor: theme.colors.text,
         headerShadowVisible: false,
         contentStyle: { backgroundColor: theme.colors.background },

@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+            backgroundColor: 'rgba(1, 62, 55, 0.55)',
   },
   sheet: {
     maxHeight: '88%',

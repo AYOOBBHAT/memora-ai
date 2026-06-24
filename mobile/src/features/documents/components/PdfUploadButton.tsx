@@ -21,6 +21,9 @@ interface PickedPdfFile {
   mimeType: string;
 }
 
+/** 25 MB — validated before upload to avoid sending oversized files. */
+const MAX_PDF_BYTES = 25 * 1024 * 1024;
+
 export interface PdfUploadButtonProps {
   collectionId?: string | null;
   title?: string;
@@ -65,6 +68,11 @@ export function PdfUploadButton({
 
       if (mimeType !== 'application/pdf' && !asset.name?.toLowerCase().endsWith('.pdf')) {
         setLocalError('Only PDF files are supported');
+        return;
+      }
+
+      if (typeof asset.size === 'number' && asset.size > MAX_PDF_BYTES) {
+        setLocalError('PDF must be 25 MB or smaller');
         return;
       }
 

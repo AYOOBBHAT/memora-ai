@@ -7,6 +7,7 @@ interface AuthPrimaryButtonProps {
   onPress: () => void;
   disabled?: boolean;
   loading?: boolean;
+  loadingLabel?: string;
 }
 
 export function AuthPrimaryButton({
@@ -14,6 +15,7 @@ export function AuthPrimaryButton({
   onPress,
   disabled = false,
   loading = false,
+  loadingLabel,
 }: AuthPrimaryButtonProps) {
   const { theme } = useTheme();
   const isDisabled = disabled || loading;
@@ -26,17 +28,31 @@ export function AuthPrimaryButton({
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
-        theme.elevation.soft,
         {
           backgroundColor: theme.colors.primary,
           borderRadius: theme.radii.lg,
           opacity: isDisabled ? 0.65 : pressed ? 0.9 : 1,
-          transform: [{ scale: pressed && !isDisabled ? 0.985 : 1 }],
         },
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={theme.colors.primaryText} />
+        <>
+          <ActivityIndicator color={theme.colors.primaryText} />
+          {loadingLabel ? (
+            <Text
+              style={[
+                styles.loadingLabel,
+                {
+                  color: theme.colors.primaryText,
+                  fontSize: theme.typography.fontSizes.md,
+                  fontWeight: theme.typography.fontWeights.semibold,
+                },
+              ]}
+            >
+              {loadingLabel}
+            </Text>
+          ) : null}
+        </>
       ) : (
         <Text
           style={[
@@ -58,8 +74,11 @@ export function AuthPrimaryButton({
 const styles = StyleSheet.create({
   button: {
     alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
     justifyContent: 'center',
     minHeight: 56,
   },
   label: {},
+  loadingLabel: {},
 });

@@ -36,12 +36,16 @@ function unwrapData<T>(response: ApiResponse<T>, fallback: string): T {
 export async function getDocuments(): Promise<SafeDocument[]> {
   const { data } = await apiClient.get<ApiResponse<{ documents: SafeDocument[] }>>('/documents');
   const payload = unwrapData(data, 'Failed to load documents');
-  return payload.documents;
+  return payload.documents ?? [];
 }
 
 export async function getRecentDocuments(): Promise<RecentDocumentsResponse> {
   const { data } = await apiClient.get<ApiResponse<RecentDocumentsResponse>>('/documents/recent');
-  return unwrapData(data, 'Failed to load recent documents');
+  const payload = unwrapData(data, 'Failed to load recent documents');
+  return {
+    recentlyViewed: payload.recentlyViewed ?? [],
+    recentlyAdded: payload.recentlyAdded ?? [],
+  };
 }
 
 export async function getDocument(id: string): Promise<SafeDocument> {
@@ -57,7 +61,11 @@ export async function createDocument(input: CreateDocumentInput): Promise<SafeDo
   const document = payload.document;
 
   if (collectionId) {
-    await assignDocumentToCollection(collectionId, document.id);
+    try {
+      await assignDocumentToCollection(collectionId, document.id);
+    } catch {
+      throw new Error('Document was saved but could not be added to the collection.');
+    }
   }
 
   return document;

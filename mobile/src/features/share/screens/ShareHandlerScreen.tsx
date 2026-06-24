@@ -17,7 +17,6 @@ import { getApiErrorMessage } from '../../../lib/apiError';
 import { queryClient, queryKeys } from '../../../lib/queryClient';
 import {
   navigateToDocumentDetail,
-  navigationRef,
 } from '../../../navigation/navigationRef';
 import type { RootStackParamList } from '../../../navigation/types';
 import { useAuthStore } from '../../../stores/auth.store';
@@ -44,29 +43,40 @@ export function ShareHandlerScreen({ navigation }: Props) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isHydrated && !isAuthenticated) {
+    if (!isHydrated) {
+      return;
+    }
+
+    if (!isAuthenticated) {
       if (navigation.canGoBack()) {
         navigation.goBack();
+      } else {
+        setErrorMessage('Sign in to save shared content to Memora.');
+        setPhase('error');
       }
       return;
     }
 
     if (!pendingShare) {
-      if (navigationRef.current?.isReady() && navigation.canGoBack()) {
-        navigation.goBack();
-      }
+      setErrorMessage('No shared content was found.');
+      setPhase('error');
       return;
     }
 
-    const parsed = parseShareContent({
-      text: pendingShare.text,
-      webUrl: pendingShare.webUrl,
-      metaTitle: pendingShare.metaTitle,
-      receivedAt: pendingShare.receivedAt,
-    });
+    try {
+      const parsed = parseShareContent({
+        text: pendingShare.text,
+        webUrl: pendingShare.webUrl,
+        metaTitle: pendingShare.metaTitle,
+        receivedAt: pendingShare.receivedAt,
+      });
 
-    setParsedContent(parsed);
-    setPhase('ready');
+      setParsedContent(parsed);
+      setPhase('ready');
+    } catch {
+      setErrorMessage('Could not read the shared content.');
+      setPhase('error');
+    }
   }, [isAuthenticated, isHydrated, navigation, pendingShare]);
 
   const previewText = useMemo(() => {
@@ -89,6 +99,12 @@ export function ShareHandlerScreen({ navigation }: Props) {
 
   const handleSave = useCallback(async () => {
     if (!parsedContent || phase === 'saving') {
+      return;
+    }
+
+    if (parsedContent.mode !== 'url' && !parsedContent.text.trim()) {
+      setErrorMessage('Shared content is empty.');
+      setPhase('error');
       return;
     }
 
@@ -141,13 +157,90 @@ export function ShareHandlerScreen({ navigation }: Props) {
     navigation.goBack();
   }, [navigation, savedDocumentId]);
 
-  if (phase === 'loading' || !parsedContent) {
+  const handleRetrySave = useCallback(() => {
+    if (!parsedContent) {
+      return;
+    }
+
+    setErrorMessage(null);
+    setPhase('ready');
+  }, [parsedContent]);
+
+  if (phase === 'loading' || (phase !== 'error' && phase !== 'success' && !parsedContent)) {
     return (
       <View style={[styles.centered, { backgroundColor: theme.colors.background }]}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
         <Text style={[styles.statusText, { color: theme.colors.textSecondary }]}>
           Detecting shared content…
         </Text>
+      </View>
+    );
+  }
+
+  if (phase === 'error') {
+    return (
+      <View style={[styles.centered, { backgroundColor: theme.colors.background }]}>
+        <Text
+          style={[
+            styles.successTitle,
+            {
+              color: theme.colors.text,
+              fontSize: theme.typography.fontSizes.lg,
+              fontWeight: theme.typography.fontWeights.semibold,
+            },
+          ]}
+        >
+          Could not import share
+        </Text>
+        {errorMessage ? (
+          <Text style={[styles.statusText, { color: theme.colors.textSecondary }]}>
+            {errorMessage}
+          </Text>
+        ) : null}
+        {parsedContent ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={handleRetrySave}
+            style={({ pressed }) => [
+              styles.primaryButton,
+              { backgroundColor: theme.colors.primary, opacity: pressed ? 0.85 : 1 },
+            ]}
+          >
+            <Text
+              style={[
+                styles.primaryButtonText,
+                {
+                  color: theme.colors.primaryText,
+                  fontSize: theme.typography.fontSizes.md,
+                  fontWeight: theme.typography.fontWeights.semibold,
+                },
+              ]}
+            >
+              Try again
+            </Text>
+          </Pressable>
+        ) : null}
+        <Pressable
+          accessibilityRole="button"
+          onPress={handleDismiss}
+          style={({ pressed }) => [
+            styles.primaryButton,
+            { backgroundColor: theme.colors.primary, opacity: pressed ? 0.85 : 1 },
+          ]}
+        >
+          <Text
+            style={[
+              styles.primaryButtonText,
+              {
+                color: theme.colors.primaryText,
+                fontSize: theme.typography.fontSizes.md,
+                fontWeight: theme.typography.fontWeights.semibold,
+              },
+            ]}
+          >
+            Close
+          </Text>
+        </Pressable>
       </View>
     );
   }
@@ -202,6 +295,10 @@ export function ShareHandlerScreen({ navigation }: Props) {
         </Pressable>
       </View>
     );
+  }
+
+  if (!parsedContent) {
+    return null;
   }
 
   return (
@@ -262,10 +359,6 @@ export function ShareHandlerScreen({ navigation }: Props) {
       </View>
 
       <CollectionPicker selectedCollectionId={collectionId} onSelect={setCollectionId} />
-
-      {phase === 'error' && errorMessage ? (
-        <ErrorBanner message={errorMessage} onRetry={() => void handleSave()} />
-      ) : null}
 
       <Pressable
         accessibilityRole="button"

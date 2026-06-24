@@ -1,15 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
+import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { ChatCitationSource } from '../../../api/types';
 import { SourceBadge } from '../../../components/ui/SourceBadge';
-import { useCollections } from '../../../hooks/queries/useCollections';
-import { useDocuments } from '../../../hooks/queries/useDocuments';
 import { getDocumentVisual } from '../../../lib/documentVisuals';
 import { useTheme } from '../../../theme/ThemeProvider';
 
 interface SourceCardProps {
   source: ChatCitationSource;
+  collectionName?: string;
   onPress: () => void;
 }
 
@@ -17,31 +17,27 @@ function formatScore(score: number): string {
   return `${Math.round(score * 100)}% match`;
 }
 
-export function SourceCard({ source, onPress }: SourceCardProps) {
+export const SourceCard = memo(function SourceCard({
+  source,
+  collectionName,
+  onPress,
+}: SourceCardProps) {
   const { theme } = useTheme();
-  const { data: collections = [] } = useCollections();
-  const { data: documents = [] } = useDocuments();
   const visual = getDocumentVisual(source.sourceType);
-
-  const document = documents.find((item) => item.id === source.documentId);
-  const collectionName =
-    collections.find((collection) => collection.id === document?.collectionId)?.name ??
-    undefined;
 
   return (
     <Pressable
       accessibilityLabel={`Open source ${source.title}`}
       accessibilityRole="button"
+      hitSlop={8}
       onPress={onPress}
       style={({ pressed }) => [
         styles.card,
-        theme.elevation.soft,
         {
-          backgroundColor: theme.colors.surfaceElevated,
-          borderColor: `${theme.colors.border}AA`,
-          borderRadius: theme.radii.lg,
-          opacity: pressed ? 0.9 : 1,
-          transform: [{ scale: pressed ? 0.99 : 1 }],
+          backgroundColor: theme.colors.surface,
+          borderColor: theme.colors.border,
+          borderRadius: theme.radii.md,
+          opacity: pressed ? 0.88 : 1,
         },
       ]}
     >
@@ -102,7 +98,7 @@ export function SourceCard({ source, onPress }: SourceCardProps) {
       <Ionicons color={theme.colors.textSecondary} name="chevron-forward" size={16} />
     </Pressable>
   );
-}
+});
 
 const styles = StyleSheet.create({
   card: {

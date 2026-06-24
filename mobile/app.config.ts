@@ -1,7 +1,7 @@
 import { ExpoConfig, ConfigContext } from 'expo/config';
 
 const APP_LOGO = './assets/new_memora_app_logo.png';
-const SPLASH_BACKGROUND = '#0F172A';
+const SPLASH_BACKGROUND = '#013E37';
 
 const GOOGLE_CLIENT_ID_SUFFIX = '.apps.googleusercontent.com';
 
@@ -45,8 +45,11 @@ function resolveGoogleSignInConfig(): {
 }
 
 function buildPlugins(googleIosUrlScheme: string | null): ExpoConfig['plugins'] {
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL?.trim() ?? '';
+  const allowCleartextTraffic = apiUrl.startsWith('http://');
+
   const plugins: ExpoConfig['plugins'] = [
-    ['expo-build-properties', { android: { usesCleartextTraffic: true } }],
+    ['expo-build-properties', { android: { usesCleartextTraffic: allowCleartextTraffic } }],
     [
       'expo-share-intent',
       {

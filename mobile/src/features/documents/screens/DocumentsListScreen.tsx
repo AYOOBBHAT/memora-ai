@@ -91,8 +91,8 @@ export function DocumentsListScreen({ navigation }: Props) {
     refetch,
     isRefetching,
   } = useRecentDocuments();
-  const { data: collections = [], isLoading: isCollectionsLoading } = useCollections();
-  const { data: conversations = [], isLoading: isChatsLoading } = useConversations();
+  const { data: collections = [], isLoading: isCollectionsLoading, isError: isCollectionsError, error: collectionsError, refetch: refetchCollections } = useCollections();
+  const { data: conversations = [], isLoading: isChatsLoading, isError: isChatsError, error: chatsError, refetch: refetchConversations } = useConversations();
   const { data: allDocuments = [] } = useDocuments();
 
   const recentlyViewed = recent?.recentlyViewed ?? [];
@@ -202,7 +202,11 @@ export function DocumentsListScreen({ navigation }: Props) {
           <RefreshControl
             refreshing={isRefetching}
             tintColor={theme.colors.primary}
-            onRefresh={() => void refetch()}
+            onRefresh={() => {
+              void refetch();
+              void refetchCollections();
+              void refetchConversations();
+            }}
           />
         }
         showsVerticalScrollIndicator={false}
@@ -216,10 +220,12 @@ export function DocumentsListScreen({ navigation }: Props) {
                   color: theme.colors.textSecondary,
                   fontSize: theme.typography.fontSizes.sm,
                   fontWeight: theme.typography.fontWeights.medium,
+                  letterSpacing: 0.4,
+                  textTransform: 'uppercase',
                 },
               ]}
             >
-              Hi, {getGreetingName(user?.name)} 👋
+              Welcome back, {getGreetingName(user?.name)}
             </Text>
             <Text
               style={[
@@ -228,21 +234,23 @@ export function DocumentsListScreen({ navigation }: Props) {
                   color: theme.colors.text,
                   fontSize: theme.typography.fontSizes.xxl,
                   fontWeight: theme.typography.fontWeights.bold,
+                  letterSpacing: -0.8,
                 },
               ]}
             >
-              Memora AI
+              Memora
             </Text>
             <Text
               style={[
                 styles.greetingSubtitle,
                 {
                   color: theme.colors.textSecondary,
-                  fontSize: theme.typography.fontSizes.sm,
+                  fontSize: theme.typography.fontSizes.md,
+                  lineHeight: 24,
                 },
               ]}
             >
-              Search your notes, PDFs, websites and YouTube with AI.
+              Your curated knowledge workspace.
             </Text>
           </View>
 
@@ -299,7 +307,14 @@ export function DocumentsListScreen({ navigation }: Props) {
               onActionPress={collections.length > 0 ? handleSeeAllCollections : undefined}
             />
           </View>
-          {previewCollections.length === 0 ? (
+          {isCollectionsError ? (
+            <View style={styles.screenPadding}>
+              <ErrorBanner
+                message={getApiErrorMessage(collectionsError, 'Failed to load collections')}
+                onRetry={() => void refetchCollections()}
+              />
+            </View>
+          ) : previewCollections.length === 0 ? (
             <View style={styles.screenPadding}>
               <SectionPlaceholder message="Create a collection to organize your documents." />
             </View>
@@ -322,6 +337,12 @@ export function DocumentsListScreen({ navigation }: Props) {
         </View>
 
         <View style={[styles.section, styles.screenPadding]}>
+          {isChatsError ? (
+            <ErrorBanner
+              message={getApiErrorMessage(chatsError, 'Failed to load recent chats')}
+              onRetry={() => void refetchConversations()}
+            />
+          ) : null}
           <AskMemoraSection
             documents={allDocuments}
             latestConversation={latestConversation}

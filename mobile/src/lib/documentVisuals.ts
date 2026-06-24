@@ -2,6 +2,7 @@ import type { ComponentProps } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 
 import type { DocumentSourceType } from '../api/types';
+import { brand } from '../theme/tokens';
 
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
 
@@ -12,36 +13,39 @@ export interface DocumentVisual {
   background: string;
 }
 
+const EDITORIAL_ACCENT = brand.butter;
+const EDITORIAL_BG = brand.butterSubtle;
+
 const VISUALS: Record<DocumentSourceType, DocumentVisual> = {
   pdf: {
-    icon: 'document-text',
+    icon: 'document-text-outline',
     label: 'PDF',
-    accent: '#F87171',
-    background: 'rgba(248, 113, 113, 0.15)',
+    accent: EDITORIAL_ACCENT,
+    background: EDITORIAL_BG,
   },
   url: {
     icon: 'globe-outline',
     label: 'Website',
-    accent: '#38BDF8',
-    background: 'rgba(56, 189, 248, 0.15)',
+    accent: EDITORIAL_ACCENT,
+    background: EDITORIAL_BG,
   },
   youtube: {
     icon: 'logo-youtube',
     label: 'YouTube',
-    accent: '#EF4444',
-    background: 'rgba(239, 68, 68, 0.15)',
+    accent: EDITORIAL_ACCENT,
+    background: EDITORIAL_BG,
   },
   text: {
     icon: 'reader-outline',
     label: 'Note',
-    accent: '#A78BFA',
-    background: 'rgba(167, 139, 250, 0.15)',
+    accent: EDITORIAL_ACCENT,
+    background: EDITORIAL_BG,
   },
   upload: {
     icon: 'cloud-upload-outline',
     label: 'Upload',
-    accent: '#34D399',
-    background: 'rgba(52, 211, 153, 0.15)',
+    accent: EDITORIAL_ACCENT,
+    background: EDITORIAL_BG,
   },
 };
 

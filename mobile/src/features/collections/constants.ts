@@ -1,12 +1,13 @@
+/** Tonal green palette for collection accents — no rainbow colors. */
 export const COLLECTION_COLORS = [
-  '#6366F1',
-  '#3B82F6',
-  '#10B981',
-  '#F59E0B',
-  '#EF4444',
-  '#EC4899',
-  '#8B5CF6',
-  '#64748B',
+  '#013E37',
+  '#024940',
+  '#035049',
+  '#045A52',
+  '#056B62',
+  '#067A70',
+  '#FFEFB3',
+  'rgba(255, 239, 179, 0.75)',
 ] as const;
 
 export {

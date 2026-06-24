@@ -16,6 +16,7 @@ import {
   type CollectionFormValues,
 } from '../components/CollectionFormFields';
 import { ErrorBanner } from '../components/ErrorBanner';
+import { LoadErrorState } from '../../../components/ui/LoadErrorState';
 import { DEFAULT_COLLECTION_COLOR, DEFAULT_COLLECTION_ICON } from '../constants';
 import { useUpdateCollection } from '../../../hooks/mutations/useUpdateCollection';
 import { useCollection } from '../../../hooks/queries/useCollection';
@@ -28,7 +29,7 @@ type Props = NativeStackScreenProps<CollectionsStackParamList, 'EditCollection'>
 export function EditCollectionScreen({ navigation, route }: Props) {
   const { collectionId } = route.params;
   const { theme } = useTheme();
-  const { data: collection, isLoading } = useCollection(collectionId);
+  const { data: collection, isLoading, isError, error, refetch, isFetching } = useCollection(collectionId);
   const updateCollection = useUpdateCollection(collectionId);
   const [values, setValues] = useState<CollectionFormValues | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
@@ -79,7 +80,7 @@ export function EditCollectionScreen({ navigation, route }: Props) {
     );
   };
 
-  if (isLoading || !values) {
+  if (isLoading && !values) {
     return (
       <ActivityIndicator
         color={theme.colors.primary}
@@ -87,6 +88,21 @@ export function EditCollectionScreen({ navigation, route }: Props) {
         style={[styles.loader, { backgroundColor: theme.colors.background }]}
       />
     );
+  }
+
+  if ((isError || !collection) && !values) {
+    return (
+      <LoadErrorState
+        isRetrying={isFetching}
+        message={getApiErrorMessage(error, 'Could not load this collection.')}
+        onRetry={() => void refetch()}
+        onBack={() => navigation.goBack()}
+      />
+    );
+  }
+
+  if (!values) {
+    return null;
   }
 
   return (
