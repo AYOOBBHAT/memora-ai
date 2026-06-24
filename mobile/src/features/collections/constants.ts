@@ -1,13 +1,11 @@
-/** Tonal green palette for collection accents — no rainbow colors. */
+/** Collection accent colors — tonal greens from design spec only */
 export const COLLECTION_COLORS = [
   '#013E37',
-  '#024940',
-  '#035049',
-  '#045A52',
-  '#056B62',
-  '#067A70',
+  '#0A4A43',
+  '#0F524B',
   '#FFEFB3',
-  'rgba(255, 239, 179, 0.75)',
+  '#E6DCB0',
+  '#B9C6BE',
 ] as const;
 
 export {

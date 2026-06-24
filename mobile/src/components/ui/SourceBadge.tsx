@@ -8,6 +8,7 @@ interface SourceBadgeProps {
   sourceType: DocumentSourceType;
 }
 
+/** Outline citation pill per design spec */
 export function SourceBadge({ sourceType }: SourceBadgeProps) {
   const { theme } = useTheme();
   const visual = getDocumentVisual(sourceType);
@@ -17,7 +18,7 @@ export function SourceBadge({ sourceType }: SourceBadgeProps) {
       style={[
         styles.badge,
         {
-          backgroundColor: visual.background,
+          borderColor: theme.colors.border,
           borderRadius: theme.radii.full,
         },
       ]}
@@ -26,9 +27,9 @@ export function SourceBadge({ sourceType }: SourceBadgeProps) {
         style={[
           styles.label,
           {
-            color: visual.accent,
-            fontSize: theme.typography.fontSizes.xs,
-            fontWeight: theme.typography.fontWeights.semibold,
+            color: theme.colors.textSecondary,
+            fontSize: theme.typography.caption.fontSize,
+            lineHeight: theme.typography.caption.lineHeight,
           },
         ]}
       >
@@ -41,10 +42,9 @@ export function SourceBadge({ sourceType }: SourceBadgeProps) {
 const styles = StyleSheet.create({
   badge: {
     alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
   },
-  label: {
-    letterSpacing: 0.3,
-  },
+  label: {},
 });

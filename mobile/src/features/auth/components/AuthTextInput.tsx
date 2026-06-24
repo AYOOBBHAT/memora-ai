@@ -57,6 +57,7 @@ export const AuthTextInput = forwardRef<TextInput, AuthTextInputProps>(function 
     }
 
     containerRef.current.measureInWindow((_x, y, _width, height) => {
+      scrollContext.registerFocusedInput(y, height);
       scrollContext.scrollToInput(y, height);
     });
   }, [scrollContext]);

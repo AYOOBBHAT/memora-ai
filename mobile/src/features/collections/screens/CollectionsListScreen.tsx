@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useLayoutEffect } from 'react';
+import { useCallback, useLayoutEffect, useMemo } from 'react';
 import {
   FlatList,
   Pressable,
@@ -14,6 +14,7 @@ import { ErrorBanner } from '../components/ErrorBanner';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { Skeleton } from '../../../components/ui/Skeleton';
 import { useCollections } from '../../../hooks/queries/useCollections';
+import { useDocuments } from '../../../hooks/queries/useDocuments';
 import { getApiErrorMessage } from '../../../lib/apiError';
 import type { CollectionsStackParamList } from '../../../navigation/types';
 import { useTheme } from '../../../theme/ThemeProvider';
@@ -23,6 +24,18 @@ type Props = NativeStackScreenProps<CollectionsStackParamList, 'CollectionsList'
 export function CollectionsListScreen({ navigation }: Props) {
   const { theme } = useTheme();
   const { data: collections = [], isLoading, isError, error, refetch, isRefetching } = useCollections();
+  const { data: documents = [] } = useDocuments();
+
+  const documentCountByCollection = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const document of documents) {
+      if (!document.collectionId) {
+        continue;
+      }
+      counts.set(document.collectionId, (counts.get(document.collectionId) ?? 0) + 1);
+    }
+    return counts;
+  }, [documents]);
 
   const handleCreatePress = useCallback(() => {
     navigation.navigate('CreateCollection');
@@ -37,9 +50,13 @@ export function CollectionsListScreen({ navigation }: Props) {
 
   const renderCollection = useCallback(
     ({ item }: { item: (typeof collections)[number] }) => (
-      <CollectionCard collection={item} onPress={() => handleCollectionPress(item.id)} />
+      <CollectionCard
+        collection={item}
+        documentCount={documentCountByCollection.get(item.id) ?? 0}
+        onPress={() => handleCollectionPress(item.id)}
+      />
     ),
-    [handleCollectionPress],
+    [documentCountByCollection, handleCollectionPress],
   );
 
   const collectionKeyExtractor = useCallback((item: (typeof collections)[number]) => item.id, []);
@@ -122,11 +139,10 @@ export function CollectionsListScreen({ navigation }: Props) {
           {
             backgroundColor: theme.colors.primary,
             opacity: pressed ? 0.92 : 1,
-            transform: [{ scale: pressed ? 0.96 : 1 }],
           },
         ]}
       >
-        <Ionicons name="add" size={28} color={theme.colors.primaryText} />
+        <Ionicons name="add" size={26} color={theme.colors.primaryText} />
       </Pressable>
     </View>
   );
@@ -142,11 +158,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   padded: {
-    padding: 16,
+    padding: 20,
   },
   listContent: {
-    padding: 16,
-    gap: 12,
+    paddingHorizontal: 20,
+    paddingTop: 16,
     paddingBottom: 96,
   },
   headerButton: {
@@ -157,9 +173,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 20,
     bottom: 20,
-    width: 58,
-    height: 58,
-    borderRadius: 29,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
   },

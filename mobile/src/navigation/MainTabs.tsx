@@ -37,10 +37,14 @@ export function MainTabs() {
         },
         tabBarActiveTintColor: theme.colors.tabBarActive,
         tabBarInactiveTintColor: theme.colors.tabBarInactive,
-        tabBarIcon: ({ color, size, focused }) => {
+        tabBarLabelStyle: {
+          fontSize: theme.typography.caption.fontSize,
+          fontWeight: theme.typography.fontWeights.medium,
+        },
+        tabBarIcon: ({ color, focused }) => {
           const icons = TAB_ICONS[route.name];
           const iconName = focused ? icons.active : icons.inactive;
-          return <Ionicons name={iconName} size={size} color={color} />;
+          return <Ionicons name={iconName} size={22} color={color} />;
         },
       })}
     >

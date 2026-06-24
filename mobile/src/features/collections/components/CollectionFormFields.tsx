@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { useInputScrollOnFocus } from '../../../components/layout/useInputScrollOnFocus';
 import {
   COLLECTION_COLORS,
   COLLECTION_ICON_OPTIONS,
@@ -25,6 +26,8 @@ interface CollectionFormFieldsProps {
 
 export function CollectionFormFields({ values, onChange, nameError }: CollectionFormFieldsProps) {
   const { theme } = useTheme();
+  const nameField = useInputScrollOnFocus();
+  const descriptionField = useInputScrollOnFocus();
 
   const inputStyle = [
     styles.input,
@@ -37,7 +40,7 @@ export function CollectionFormFields({ values, onChange, nameError }: Collection
 
   return (
     <View style={styles.container}>
-      <View style={styles.field}>
+      <View ref={nameField.fieldRef} style={styles.field}>
         <Text
           style={[
             styles.label,
@@ -55,16 +58,18 @@ export function CollectionFormFields({ values, onChange, nameError }: Collection
           autoCapitalize="sentences"
           placeholder="My collection"
           placeholderTextColor={theme.colors.textSecondary}
+          returnKeyType="next"
           style={inputStyle}
           value={values.name}
           onChangeText={(name) => onChange({ ...values, name })}
+          onFocus={nameField.createFocusHandler()}
         />
         {nameError ? (
           <Text style={[styles.fieldError, { color: theme.colors.error }]}>{nameError}</Text>
         ) : null}
       </View>
 
-      <View style={styles.field}>
+      <View ref={descriptionField.fieldRef} style={styles.field}>
         <Text
           style={[
             styles.label,
@@ -87,6 +92,7 @@ export function CollectionFormFields({ values, onChange, nameError }: Collection
           textAlignVertical="top"
           value={values.description}
           onChangeText={(description) => onChange({ ...values, description })}
+          onFocus={descriptionField.createFocusHandler()}
         />
       </View>
 

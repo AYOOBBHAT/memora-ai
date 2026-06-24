@@ -29,6 +29,7 @@ import { useCollections } from '../../../hooks/queries/useCollections';
 import { useConversations } from '../../../hooks/queries/useConversations';
 import { useDocuments, useRecentDocuments } from '../../../hooks/queries/useDocuments';
 import { getApiErrorMessage } from '../../../lib/apiError';
+import { getTimeGreeting } from '../../../lib/greeting';
 import type { DocumentsStackParamList, MainTabParamList } from '../../../navigation/types';
 import { useTheme } from '../../../theme/ThemeProvider';
 
@@ -225,15 +226,16 @@ export function DocumentsListScreen({ navigation }: Props) {
                 },
               ]}
             >
-              Welcome back, {getGreetingName(user?.name)}
+              {getTimeGreeting()}, {getGreetingName(user?.name)}
             </Text>
             <Text
               style={[
                 styles.brandTitle,
                 {
                   color: theme.colors.text,
-                  fontSize: theme.typography.fontSizes.xxl,
-                  fontWeight: theme.typography.fontWeights.bold,
+                  fontSize: theme.typography.h1.fontSize,
+                  fontWeight: theme.typography.h1.fontWeight,
+                  lineHeight: theme.typography.h1.lineHeight,
                   letterSpacing: -0.8,
                 },
               ]}
@@ -245,12 +247,12 @@ export function DocumentsListScreen({ navigation }: Props) {
                 styles.greetingSubtitle,
                 {
                   color: theme.colors.textSecondary,
-                  fontSize: theme.typography.fontSizes.md,
-                  lineHeight: 24,
+                  fontSize: theme.typography.bodyLarge.fontSize,
+                  lineHeight: theme.typography.bodyLarge.lineHeight,
                 },
               ]}
             >
-              Your curated knowledge workspace.
+              Your knowledge workspace
             </Text>
           </View>
 
@@ -398,10 +400,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   screenPadding: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
   },
   scrollContent: {
-    gap: 32,
+    gap: 24,
   },
   greetingBlock: {
     gap: 6,

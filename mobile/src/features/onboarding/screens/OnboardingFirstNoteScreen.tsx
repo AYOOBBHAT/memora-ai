@@ -1,15 +1,10 @@
-import { useMemo, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { useMemo, useRef, useState } from 'react';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useQueryClient } from '@tanstack/react-query';
 
+import { KeyboardAwareScreen } from '../../../components/layout/KeyboardAwareScreen';
+import { useInputScrollOnFocus } from '../../../components/layout/useInputScrollOnFocus';
 import { ErrorBanner } from '../../collections/components/ErrorBanner';
 import {
   OnboardingLayout,
@@ -31,6 +26,7 @@ export function OnboardingFirstNoteScreen({ navigation, route }: Props) {
   const { skipOnboarding } = useOnboardingFlow();
   const createDocument = useCreateDocument();
   const queryClient = useQueryClient();
+  const contentInputRef = useRef<TextInput>(null);
   const category = useMemo(
     () => getCategoryById(route.params.categoryId),
     [route.params.categoryId],
@@ -39,6 +35,8 @@ export function OnboardingFirstNoteScreen({ navigation, route }: Props) {
   const [content, setContent] = useState('');
   const [apiError, setApiError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const titleField = useInputScrollOnFocus();
+  const contentField = useInputScrollOnFocus();
 
   const handleSave = async () => {
     const trimmedContent = content.trim();
@@ -84,9 +82,10 @@ export function OnboardingFirstNoteScreen({ navigation, route }: Props) {
       }
       onSkip={() => void skipOnboarding()}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      <KeyboardAwareScreen
+        contentContainerStyle={styles.scrollContent}
         style={styles.flex}
+        variant="scroll"
       >
         <Text
           style={[
@@ -114,9 +113,10 @@ export function OnboardingFirstNoteScreen({ navigation, route }: Props) {
 
         {apiError ? <ErrorBanner message={apiError} onRetry={() => setApiError(null)} /> : null}
 
-        <View style={styles.fieldGroup}>
+        <View ref={titleField.fieldRef} style={styles.fieldGroup}>
           <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Title</Text>
           <TextInput
+            returnKeyType="next"
             value={title}
             onChangeText={setTitle}
             placeholder="Note title"
@@ -129,13 +129,17 @@ export function OnboardingFirstNoteScreen({ navigation, route }: Props) {
                 color: theme.colors.text,
               },
             ]}
+            onFocus={titleField.createFocusHandler()}
+            onSubmitEditing={() => contentInputRef.current?.focus()}
           />
         </View>
 
-        <View style={[styles.fieldGroup, styles.contentGroup]}>
+        <View ref={contentField.fieldRef} style={[styles.fieldGroup, styles.contentGroup]}>
           <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Content</Text>
           <TextInput
+            ref={contentInputRef}
             multiline
+            returnKeyType="done"
             value={content}
             onChangeText={setContent}
             placeholder={category.notePlaceholder}
@@ -150,9 +154,11 @@ export function OnboardingFirstNoteScreen({ navigation, route }: Props) {
               },
             ]}
             textAlignVertical="top"
+            onFocus={contentField.createFocusHandler()}
+            onSubmitEditing={() => void handleSave()}
           />
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardAwareScreen>
     </OnboardingLayout>
   );
 }
@@ -160,6 +166,10 @@ export function OnboardingFirstNoteScreen({ navigation, route }: Props) {
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
+  },
+  scrollContent: {
+    gap: 0,
+    paddingBottom: 16,
   },
   title: {
     marginBottom: 8,
@@ -172,7 +182,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   contentGroup: {
-    flex: 1,
+    minHeight: 160,
   },
   label: {
     fontSize: 13,
@@ -187,7 +197,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   contentInput: {
-    flex: 1,
     minHeight: 140,
   },
 });

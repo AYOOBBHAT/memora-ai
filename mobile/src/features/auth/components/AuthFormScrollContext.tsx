@@ -1,11 +1,5 @@
-import { createContext, useContext } from 'react';
-
-export type AuthFormScrollContextValue = {
-  scrollToInput: (inputY: number, inputHeight: number) => void;
-};
-
-export const AuthFormScrollContext = createContext<AuthFormScrollContextValue | null>(null);
-
-export function useAuthFormScroll(): AuthFormScrollContextValue | null {
-  return useContext(AuthFormScrollContext);
-}
+export {
+  KeyboardScrollContext as AuthFormScrollContext,
+  useKeyboardScroll as useAuthFormScroll,
+  type KeyboardScrollContextValue as AuthFormScrollContextValue,
+} from '../../../components/layout/KeyboardScrollContext';

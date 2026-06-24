@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
   },
   button: {
     alignItems: 'center',
-    borderRadius: 12,
+    borderRadius: 18,
     justifyContent: 'center',
     minHeight: 48,
     minWidth: 140,

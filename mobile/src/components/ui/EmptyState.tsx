@@ -27,30 +27,21 @@ export function EmptyState({
       style={[
         styles.container,
         {
-          backgroundColor: theme.colors.surfaceElevated,
+          backgroundColor: theme.colors.surface,
           borderColor: theme.colors.border,
           borderRadius: theme.radii.lg,
         },
       ]}
     >
-      <View
-        style={[
-          styles.iconWrap,
-          {
-            backgroundColor: `${theme.colors.primary}14`,
-            borderRadius: theme.radii.full,
-          },
-        ]}
-      >
-        <Text style={styles.icon}>{icon}</Text>
-      </View>
+      <Text style={styles.icon}>{icon}</Text>
       <Text
         style={[
           styles.title,
           {
             color: theme.colors.text,
-            fontSize: theme.typography.fontSizes.lg,
-            fontWeight: theme.typography.fontWeights.semibold,
+            fontSize: theme.typography.h3.fontSize,
+            fontWeight: theme.typography.h3.fontWeight,
+            lineHeight: theme.typography.h3.lineHeight,
           },
         ]}
       >
@@ -60,8 +51,9 @@ export function EmptyState({
         style={[
           styles.subtitle,
           {
-            color: theme.colors.textSecondary,
-            fontSize: theme.typography.fontSizes.sm,
+            color: theme.colors.textMuted,
+            fontSize: theme.typography.body.fontSize,
+            lineHeight: theme.typography.body.lineHeight,
           },
         ]}
       >
@@ -73,12 +65,10 @@ export function EmptyState({
           onPress={onActionPress}
           style={({ pressed }) => [
             styles.button,
-            theme.elevation.soft,
             {
               backgroundColor: theme.colors.primary,
-              borderRadius: theme.radii.md,
+              borderRadius: theme.radii.lg,
               opacity: pressed ? 0.88 : 1,
-              transform: [{ scale: pressed ? 0.98 : 1 }],
             },
           ]}
         >
@@ -87,7 +77,7 @@ export function EmptyState({
               styles.buttonText,
               {
                 color: theme.colors.primaryText,
-                fontSize: theme.typography.fontSizes.sm,
+                fontSize: theme.typography.bodyLarge.fontSize,
                 fontWeight: theme.typography.fontWeights.semibold,
               },
             ]}
@@ -105,34 +95,27 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     borderWidth: StyleSheet.hairlineWidth,
-    paddingVertical: 28,
-    paddingHorizontal: 20,
-    gap: 8,
-  },
-  iconWrap: {
-    width: 56,
-    height: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
+    gap: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 32,
   },
   icon: {
-    fontSize: 28,
+    fontSize: 32,
+    marginBottom: 4,
   },
   title: {
     textAlign: 'center',
   },
   subtitle: {
+    marginBottom: 4,
     textAlign: 'center',
-    lineHeight: 21,
-    marginBottom: 8,
   },
   button: {
-    minHeight: 44,
-    paddingHorizontal: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 4,
+    marginTop: 8,
+    minHeight: 48,
+    paddingHorizontal: 24,
   },
   buttonText: {},
 });

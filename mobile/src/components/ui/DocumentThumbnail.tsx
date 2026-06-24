@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 
 import type { DocumentSourceType } from '../../api/types';
 import { getDocumentVisual } from '../../lib/documentVisuals';
+import { useTheme } from '../../theme/ThemeProvider';
 
 interface DocumentThumbnailProps {
   sourceType: DocumentSourceType;
@@ -11,11 +12,12 @@ interface DocumentThumbnailProps {
 
 const SIZES = {
   sm: { box: 36, icon: 18 },
-  md: { box: 44, icon: 22 },
-  lg: { box: 56, icon: 26 },
+  md: { box: 44, icon: 20 },
+  lg: { box: 52, icon: 22 },
 } as const;
 
 export function DocumentThumbnail({ sourceType, size = 'md' }: DocumentThumbnailProps) {
+  const { theme } = useTheme();
   const visual = getDocumentVisual(sourceType);
   const dimensions = SIZES[size];
 
@@ -26,12 +28,13 @@ export function DocumentThumbnail({ sourceType, size = 'md' }: DocumentThumbnail
         {
           width: dimensions.box,
           height: dimensions.box,
-          borderRadius: dimensions.box * 0.28,
-          backgroundColor: visual.background,
+          borderRadius: theme.radii.md,
+          backgroundColor: theme.colors.surfaceElevated,
+          borderColor: theme.colors.border,
         },
       ]}
     >
-      <Ionicons color={visual.accent} name={visual.icon} size={dimensions.icon} />
+      <Ionicons color={theme.colors.icon} name={visual.icon} size={dimensions.icon} />
     </View>
   );
 }
@@ -39,6 +42,7 @@ export function DocumentThumbnail({ sourceType, size = 'md' }: DocumentThumbnail
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
     justifyContent: 'center',
   },
 });

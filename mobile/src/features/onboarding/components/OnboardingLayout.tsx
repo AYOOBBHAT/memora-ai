@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useKeyboardInset } from '../../../hooks/useKeyboardInset';
 import { ONBOARDING_STEPS } from '../constants';
 import { useTheme } from '../../../theme/ThemeProvider';
 
@@ -21,9 +22,13 @@ export function OnboardingLayout({
   showSkip = true,
 }: OnboardingLayoutProps) {
   const { theme } = useTheme();
+  const { isKeyboardVisible, footerPadding } = useKeyboardInset();
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView
+      edges={isKeyboardVisible ? ['top', 'left', 'right'] : undefined}
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    >
       <View style={styles.topRow}>
         <View style={styles.progressRow}>
           {Array.from({ length: ONBOARDING_STEPS }, (_, index) => {
@@ -59,9 +64,22 @@ export function OnboardingLayout({
         )}
       </View>
 
-      <View style={styles.content}>{children}</View>
+      <View style={[styles.content, isKeyboardVisible ? styles.contentWithKeyboard : null]}>
+        {children}
+      </View>
 
-      {footer ? <View style={styles.footer}>{footer}</View> : null}
+      {footer ? (
+        <Animated.View
+          style={[
+            styles.footer,
+            Platform.OS === 'ios' && isKeyboardVisible
+              ? { paddingBottom: footerPadding }
+              : null,
+          ]}
+        >
+          {footer}
+        </Animated.View>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -170,6 +188,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 24,
     justifyContent: 'center',
+  },
+  contentWithKeyboard: {
+    justifyContent: 'flex-start',
   },
   footer: {
     paddingHorizontal: 24,

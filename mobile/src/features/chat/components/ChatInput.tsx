@@ -12,7 +12,6 @@ interface ChatInputProps {
   placeholder?: string;
   onFocus?: () => void;
   onBlur?: () => void;
-  bottomInset?: number;
 }
 
 export const ChatInput = forwardRef<TextInputType, ChatInputProps>(function ChatInput(
@@ -24,7 +23,6 @@ export const ChatInput = forwardRef<TextInputType, ChatInputProps>(function Chat
     placeholder = 'Ask about your notes…',
     onFocus,
     onBlur,
-    bottomInset = 0,
   },
   ref,
 ) {
@@ -39,7 +37,7 @@ export const ChatInput = forwardRef<TextInputType, ChatInputProps>(function Chat
         {
           backgroundColor: theme.colors.background,
           borderTopColor: theme.colors.border,
-          paddingBottom: 12 + bottomInset,
+          paddingBottom: 8,
         },
       ]}
     >
@@ -103,16 +101,16 @@ const styles = StyleSheet.create({
   container: {
     borderTopWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingTop: 8,
   },
   inputRow: {
     alignItems: 'flex-end',
     borderWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     gap: 8,
-    minHeight: 52,
+    minHeight: 48,
     paddingHorizontal: 6,
-    paddingVertical: 6,
+    paddingVertical: 5,
   },
   input: {
     flex: 1,

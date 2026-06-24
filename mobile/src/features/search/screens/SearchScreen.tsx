@@ -3,8 +3,7 @@ import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  KeyboardAvoidingView,
-  Platform,
+  Keyboard,
   Pressable,
   StyleSheet,
   Text,
@@ -227,8 +226,10 @@ export function SearchScreen({ navigation }: Props) {
   );
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    <Pressable
+      accessibilityRole="none"
+      accessible={false}
+      onPress={Keyboard.dismiss}
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
       <View
@@ -260,7 +261,7 @@ export function SearchScreen({ navigation }: Props) {
               },
             ]}
           >
-          <Ionicons name="search" size={20} color={theme.colors.textSecondary} />
+          <Ionicons name="search-outline" size={20} color={theme.colors.textMuted} />
           <TextInput
             accessibilityLabel="Search documents and collections"
             autoCapitalize="none"
@@ -268,13 +269,14 @@ export function SearchScreen({ navigation }: Props) {
             autoFocus
             clearButtonMode="never"
             placeholder="Search documents and collections"
-            placeholderTextColor={theme.colors.textSecondary}
+            placeholderTextColor={theme.colors.textMuted}
             returnKeyType="search"
             style={[
               styles.input,
               {
                 color: theme.colors.text,
-                fontSize: theme.typography.fontSizes.md,
+                fontSize: theme.typography.bodyLarge.fontSize,
+                lineHeight: theme.typography.bodyLarge.lineHeight,
               },
             ]}
             value={query}
@@ -287,7 +289,7 @@ export function SearchScreen({ navigation }: Props) {
               hitSlop={8}
               onPress={handleClear}
             >
-              <Ionicons name="close-circle" size={20} color={theme.colors.textSecondary} />
+              <Ionicons name="close-circle-outline" size={20} color={theme.colors.textMuted} />
             </Pressable>
           ) : null}
           </View>
@@ -373,17 +375,22 @@ export function SearchScreen({ navigation }: Props) {
         <FlatList
           contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 16 }]}
           data={listItems}
+          keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled"
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
+          style={styles.flex}
         />
       ) : null}
-    </KeyboardAvoidingView>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  flex: {
     flex: 1,
   },
   searchBar: {

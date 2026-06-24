@@ -1,14 +1,8 @@
 import { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-} from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+
+import { KeyboardAwareScreen } from '../../../components/layout/KeyboardAwareScreen';
 
 import {
   CollectionFormFields,
@@ -106,11 +100,11 @@ export function EditCollectionScreen({ navigation, route }: Props) {
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    <KeyboardAwareScreen
+      backgroundColor={theme.colors.background}
+      contentContainerStyle={styles.content}
+      variant="scroll"
     >
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <CollectionFormFields values={values} onChange={setValues} nameError={nameError} />
 
         {apiError ? <ErrorBanner message={apiError} /> : null}
@@ -144,8 +138,7 @@ export function EditCollectionScreen({ navigation, route }: Props) {
             </Text>
           )}
         </Pressable>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScreen>
   );
 }
 

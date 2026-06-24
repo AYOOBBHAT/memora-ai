@@ -263,7 +263,7 @@ export function ProfileScreen() {
                   style={[
                     styles.statCard,
                     {
-                      backgroundColor: theme.colors.surfaceSecondary,
+                      backgroundColor: theme.colors.surface,
                       borderColor: theme.colors.border,
                       borderRadius: theme.radii.lg,
                     },
@@ -289,8 +289,8 @@ export function ProfileScreen() {
                     style={[
                       styles.statLabel,
                       {
-                        color: theme.colors.textSecondary,
-                        fontSize: theme.typography.fontSizes.xs,
+                        color: theme.colors.textMuted,
+                        fontSize: theme.typography.caption.fontSize,
                       },
                     ]}
                   >
@@ -458,7 +458,9 @@ export function ProfileScreen() {
         visible={isChangePasswordOpen}
         onClose={() => setIsChangePasswordOpen(false)}
       >
-        <AuthFormScrollContext.Provider value={{ scrollToInput: () => {} }}>
+        <AuthFormScrollContext.Provider
+          value={{ scrollToInput: () => {}, registerFocusedInput: () => {} }}
+        >
           <ChangePasswordForm
             infoMessage="Password changes will be available in a future update."
             onSubmit={() => {

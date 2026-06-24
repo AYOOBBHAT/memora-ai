@@ -4,7 +4,6 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { ChatCitationSource } from '../../../api/types';
 import { SourceBadge } from '../../../components/ui/SourceBadge';
-import { getDocumentVisual } from '../../../lib/documentVisuals';
 import { useTheme } from '../../../theme/ThemeProvider';
 
 interface SourceCardProps {
@@ -14,16 +13,16 @@ interface SourceCardProps {
 }
 
 function formatScore(score: number): string {
-  return `${Math.round(score * 100)}% match`;
+  return `${Math.round(score * 100)}%`;
 }
 
+/** Outline citation chip per design spec */
 export const SourceCard = memo(function SourceCard({
   source,
   collectionName,
   onPress,
 }: SourceCardProps) {
   const { theme } = useTheme();
-  const visual = getDocumentVisual(source.sourceType);
 
   return (
     <Pressable
@@ -34,33 +33,22 @@ export const SourceCard = memo(function SourceCard({
       style={({ pressed }) => [
         styles.card,
         {
-          backgroundColor: theme.colors.surface,
           borderColor: theme.colors.border,
           borderRadius: theme.radii.md,
           opacity: pressed ? 0.88 : 1,
         },
       ]}
     >
-      <View
-        style={[
-          styles.iconWrap,
-          {
-            backgroundColor: visual.background,
-            borderRadius: theme.radii.md,
-          },
-        ]}
-      >
-        <Ionicons color={visual.accent} name={visual.icon} size={18} />
-      </View>
       <View style={styles.content}>
         <Text
-          numberOfLines={2}
+          numberOfLines={1}
           style={[
             styles.title,
             {
               color: theme.colors.text,
-              fontSize: theme.typography.fontSizes.sm,
-              fontWeight: theme.typography.fontWeights.semibold,
+              fontSize: theme.typography.body.fontSize,
+              fontWeight: theme.typography.fontWeights.medium,
+              lineHeight: theme.typography.body.lineHeight,
             },
           ]}
         >
@@ -74,8 +62,8 @@ export const SourceCard = memo(function SourceCard({
               style={[
                 styles.collection,
                 {
-                  color: theme.colors.textSecondary,
-                  fontSize: theme.typography.fontSizes.xs,
+                  color: theme.colors.textMuted,
+                  fontSize: theme.typography.caption.fontSize,
                 },
               ]}
             >
@@ -86,16 +74,16 @@ export const SourceCard = memo(function SourceCard({
             style={[
               styles.score,
               {
-                color: theme.colors.textSecondary,
-                fontSize: theme.typography.fontSizes.xs,
+                color: theme.colors.textMuted,
+                fontSize: theme.typography.caption.fontSize,
               },
             ]}
           >
-            {formatScore(source.score)}
+            {formatScore(source.score)} match
           </Text>
         </View>
       </View>
-      <Ionicons color={theme.colors.textSecondary} name="chevron-forward" size={16} />
+      <Ionicons color={theme.colors.textMuted} name="open-outline" size={16} />
     </Pressable>
   );
 });
@@ -106,23 +94,14 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     gap: 10,
-    minHeight: 52,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  iconWrap: {
-    alignItems: 'center',
-    height: 40,
-    justifyContent: 'center',
-    width: 40,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   content: {
     flex: 1,
     gap: 6,
   },
-  title: {
-    lineHeight: 18,
-  },
+  title: {},
   meta: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -131,7 +110,7 @@ const styles = StyleSheet.create({
   },
   collection: {
     flexShrink: 1,
-    maxWidth: '46%',
+    maxWidth: '40%',
   },
   score: {},
 });

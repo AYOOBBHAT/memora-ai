@@ -16,12 +16,12 @@ export function SectionHeader({ title, actionLabel, onActionPress }: SectionHead
       <Text
         style={[
           styles.title,
-          {
-            color: theme.colors.text,
-            fontSize: theme.typography.fontSizes.lg,
-            fontWeight: theme.typography.fontWeights.semibold,
-            letterSpacing: -0.2,
-          },
+            {
+              color: theme.colors.text,
+              fontSize: theme.typography.h3.fontSize,
+              fontWeight: theme.typography.h3.fontWeight,
+              lineHeight: theme.typography.h3.lineHeight,
+            },
         ]}
       >
         {title}
@@ -37,8 +37,8 @@ export function SectionHeader({ title, actionLabel, onActionPress }: SectionHead
             style={[
               styles.action,
               {
-                color: theme.colors.primary,
-                fontSize: theme.typography.fontSizes.sm,
+              color: theme.colors.textSecondary,
+              fontSize: theme.typography.body.fontSize,
                 fontWeight: theme.typography.fontWeights.medium,
               },
             ]}

@@ -140,7 +140,7 @@ function renderInlineText(text: string, textColor: string, keyPrefix: string) {
           key={`${keyPrefix}-c-${partIndex++}`}
           style={{
             fontFamily: 'monospace',
-            backgroundColor: brand.butterSubtle,
+            backgroundColor: brand.border,
             borderRadius: 4,
             paddingHorizontal: 4,
           }}

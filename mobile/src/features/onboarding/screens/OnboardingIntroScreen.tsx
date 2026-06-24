@@ -33,8 +33,9 @@ export function OnboardingIntroScreen({ navigation }: Props) {
             styles.title,
             {
               color: theme.colors.text,
-              fontSize: theme.typography.fontSizes.xxl,
-              fontWeight: theme.typography.fontWeights.bold,
+              fontSize: theme.typography.h1.fontSize,
+              fontWeight: theme.typography.h1.fontWeight,
+              lineHeight: theme.typography.h1.lineHeight,
             },
           ]}
         >

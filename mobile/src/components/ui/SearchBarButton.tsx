@@ -24,19 +24,20 @@ export function SearchBarButton({
         {
           backgroundColor: theme.colors.surface,
           borderColor: theme.colors.border,
-          borderRadius: theme.radii.xl,
+          borderRadius: theme.radii.lg,
           opacity: pressed ? 0.92 : 1,
         },
       ]}
     >
-      <Ionicons color={theme.colors.icon} name="search" size={20} />
+      <Ionicons color={theme.colors.textMuted} name="search-outline" size={20} />
       <Text
         numberOfLines={1}
         style={[
           styles.placeholder,
           {
-            color: theme.colors.textSecondary,
-            fontSize: theme.typography.fontSizes.sm,
+            color: theme.colors.textMuted,
+            fontSize: theme.typography.body.fontSize,
+            lineHeight: theme.typography.body.lineHeight,
           },
         ]}
       >
@@ -48,16 +49,16 @@ export function SearchBarButton({
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
     borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    gap: 12,
     minHeight: 52,
-    paddingHorizontal: 18,
+    paddingHorizontal: 16,
     paddingVertical: 14,
+    width: '100%',
   },
   placeholder: {
     flex: 1,
-    lineHeight: 20,
   },
 });

@@ -9,17 +9,27 @@ import { useTheme } from '../../../theme/ThemeProvider';
 interface CollectionScopeBadgeProps {
   collection: ChatCollectionScope;
   onClear: () => void;
+  compact?: boolean;
 }
 
-export function CollectionScopeBadge({ collection, onClear }: CollectionScopeBadgeProps) {
+export function CollectionScopeBadge({
+  collection,
+  onClear,
+  compact = false,
+}: CollectionScopeBadgeProps) {
   const { theme } = useTheme();
   const accentColor = collection.color ?? DEFAULT_COLLECTION_COLOR;
 
   return (
-    <View style={[styles.wrapper, { backgroundColor: theme.colors.background }]}>
+    <View
+      style={[
+        compact ? styles.wrapperCompact : styles.wrapper,
+        { backgroundColor: theme.colors.background },
+      ]}
+    >
       <View
         style={[
-          styles.chip,
+          compact ? styles.chipCompact : styles.chip,
           {
             backgroundColor: `${accentColor}14`,
             borderColor: `${accentColor}44`,
@@ -28,44 +38,63 @@ export function CollectionScopeBadge({ collection, onClear }: CollectionScopeBad
         ]}
       >
         {collection.icon ? (
-          <CollectionIconDisplay color={accentColor} icon={collection.icon} size={16} />
+          <CollectionIconDisplay color={accentColor} icon={collection.icon} size={compact ? 14 : 16} />
         ) : (
-          <Ionicons color={accentColor} name="folder-outline" size={16} />
+          <Ionicons color={accentColor} name="folder-outline" size={compact ? 14 : 16} />
         )}
-        <View style={styles.textWrap}>
-          <Text
-            style={[
-              styles.label,
-              {
-                color: theme.colors.textSecondary,
-                fontSize: theme.typography.fontSizes.xs,
-              },
-            ]}
-          >
-            Chatting with
-          </Text>
+        {compact ? (
           <Text
             numberOfLines={1}
             style={[
-              styles.name,
+              styles.nameCompact,
               {
                 color: theme.colors.text,
-                fontSize: theme.typography.fontSizes.sm,
-                fontWeight: theme.typography.fontWeights.semibold,
+                fontSize: theme.typography.fontSizes.xs,
+                fontWeight: theme.typography.fontWeights.medium,
               },
             ]}
           >
             {collection.name}
           </Text>
-        </View>
+        ) : (
+          <View style={styles.textWrap}>
+            <Text
+              style={[
+                styles.label,
+                {
+                  color: theme.colors.textSecondary,
+                  fontSize: theme.typography.fontSizes.xs,
+                },
+              ]}
+            >
+              Chatting with
+            </Text>
+            <Text
+              numberOfLines={1}
+              style={[
+                styles.name,
+                {
+                  color: theme.colors.text,
+                  fontSize: theme.typography.fontSizes.sm,
+                  fontWeight: theme.typography.fontWeights.semibold,
+                },
+              ]}
+            >
+              {collection.name}
+            </Text>
+          </View>
+        )}
         <Pressable
           accessibilityLabel="Clear collection scope"
           accessibilityRole="button"
           hitSlop={8}
           onPress={onClear}
-          style={({ pressed }) => [styles.clearButton, { opacity: pressed ? 0.6 : 1 }]}
+          style={({ pressed }) => [
+            compact ? styles.clearButtonCompact : styles.clearButton,
+            { opacity: pressed ? 0.6 : 1 },
+          ]}
         >
-          <Ionicons color={theme.colors.textSecondary} name="close" size={18} />
+          <Ionicons color={theme.colors.textSecondary} name="close" size={compact ? 16 : 18} />
         </Pressable>
       </View>
     </View>
@@ -78,6 +107,11 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 4,
   },
+  wrapperCompact: {
+    paddingBottom: 0,
+    paddingHorizontal: 16,
+    paddingTop: 4,
+  },
   chip: {
     alignItems: 'center',
     borderWidth: 1,
@@ -86,6 +120,17 @@ const styles = StyleSheet.create({
     minHeight: 44,
     paddingHorizontal: 14,
     paddingVertical: 8,
+  },
+  chipCompact: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 6,
+    maxWidth: '100%',
+    minHeight: 28,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
   },
   textWrap: {
     flex: 1,
@@ -97,10 +142,20 @@ const styles = StyleSheet.create({
   name: {
     lineHeight: 18,
   },
+  nameCompact: {
+    flexShrink: 1,
+    lineHeight: 16,
+  },
   clearButton: {
     alignItems: 'center',
     height: 28,
     justifyContent: 'center',
     width: 28,
+  },
+  clearButtonCompact: {
+    alignItems: 'center',
+    height: 22,
+    justifyContent: 'center',
+    width: 22,
   },
 });

@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { useInputScrollOnFocus } from '../../../components/layout/useInputScrollOnFocus';
 import type { DocumentSourceType } from '../../../api/types';
 import { useTheme } from '../../../theme/ThemeProvider';
 import { CollectionPicker } from './CollectionPicker';
@@ -51,6 +52,8 @@ export function DocumentFormFields({
   showContentField = true,
 }: DocumentFormFieldsProps) {
   const { theme } = useTheme();
+  const titleField = useInputScrollOnFocus();
+  const contentField = useInputScrollOnFocus();
 
   const inputStyle = (hasError?: boolean) => [
     styles.input,
@@ -63,7 +66,7 @@ export function DocumentFormFields({
 
   return (
     <View style={styles.container}>
-      <View style={styles.field}>
+      <View ref={titleField.fieldRef} style={styles.field}>
         <Text
           style={[
             styles.label,
@@ -81,9 +84,11 @@ export function DocumentFormFields({
           autoCapitalize="sentences"
           placeholder="Document title"
           placeholderTextColor={theme.colors.textSecondary}
+          returnKeyType="next"
           style={inputStyle(Boolean(titleError))}
           value={values.title}
           onChangeText={(title) => onChange({ ...values, title })}
+          onFocus={titleField.createFocusHandler()}
         />
         {titleError ? (
           <Text style={[styles.fieldError, { color: theme.colors.error }]}>{titleError}</Text>
@@ -91,7 +96,7 @@ export function DocumentFormFields({
       </View>
 
       {showContentField ? (
-        <View style={styles.field}>
+        <View ref={contentField.fieldRef} style={styles.field}>
           <Text
             style={[
               styles.label,
@@ -109,10 +114,12 @@ export function DocumentFormFields({
             multiline
             placeholder="Paste or write your text here..."
             placeholderTextColor={theme.colors.textSecondary}
+            returnKeyType="default"
             style={[inputStyle(Boolean(contentError)), styles.textArea]}
             textAlignVertical="top"
             value={values.content}
             onChangeText={(content) => onChange({ ...values, content })}
+            onFocus={contentField.createFocusHandler()}
           />
           {contentError ? (
             <Text style={[styles.fieldError, { color: theme.colors.error }]}>{contentError}</Text>

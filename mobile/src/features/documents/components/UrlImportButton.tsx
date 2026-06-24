@@ -11,6 +11,7 @@ import {
 
 import type { SafeDocument } from '../../../api/types';
 import { isValidHttpUrl } from '../../../api/services/documents.service';
+import { useInputScrollOnFocus } from '../../../components/layout/useInputScrollOnFocus';
 import { ErrorBanner } from '../../collections/components/ErrorBanner';
 import { useImportUrl } from '../../../hooks/mutations/useImportUrl';
 import { getApiErrorMessage } from '../../../lib/apiError';
@@ -35,6 +36,7 @@ export function UrlImportButton({
 }: UrlImportButtonProps) {
   const { theme } = useTheme();
   const importUrl = useImportUrl();
+  const urlField = useInputScrollOnFocus();
   const [url, setUrl] = useState('');
   const [urlError, setUrlError] = useState<string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -106,7 +108,7 @@ export function UrlImportButton({
 
   return (
     <View style={styles.container}>
-      <View style={styles.field}>
+      <View ref={urlField.fieldRef} style={styles.field}>
         <TextInput
           accessibilityLabel="Page URL"
           autoCapitalize="none"
@@ -115,6 +117,7 @@ export function UrlImportButton({
           keyboardType="url"
           placeholder="https://example.com/article"
           placeholderTextColor={theme.colors.textSecondary}
+          returnKeyType="done"
           style={inputStyle}
           value={url}
           onChangeText={(value) => {
@@ -123,6 +126,8 @@ export function UrlImportButton({
               setUrlError(null);
             }
           }}
+          onFocus={urlField.createFocusHandler()}
+          onSubmitEditing={handleImport}
         />
         {urlError ? (
           <Text style={[styles.fieldError, { color: theme.colors.error }]}>{urlError}</Text>

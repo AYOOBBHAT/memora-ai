@@ -57,8 +57,8 @@ export function ErrorBanner({ message, onRetry }: ErrorBannerProps) {
 
 const styles = StyleSheet.create({
   container: {
-    borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 18,
+    borderWidth: StyleSheet.hairlineWidth,
     padding: 12,
     gap: 8,
   },

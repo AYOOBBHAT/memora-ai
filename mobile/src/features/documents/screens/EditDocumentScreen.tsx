@@ -1,14 +1,8 @@
 import { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-} from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+
+import { KeyboardAwareScreen } from '../../../components/layout/KeyboardAwareScreen';
 
 import { ErrorBanner } from '../../collections/components/ErrorBanner';
 import { LoadErrorState } from '../../../components/ui/LoadErrorState';
@@ -118,11 +112,11 @@ export function EditDocumentScreen({ navigation, route }: Props) {
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    <KeyboardAwareScreen
+      backgroundColor={theme.colors.background}
+      contentContainerStyle={styles.content}
+      variant="scroll"
     >
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <DocumentFormFields
           values={values}
           onChange={setValues}
@@ -163,8 +157,7 @@ export function EditDocumentScreen({ navigation, route }: Props) {
             </Text>
           )}
         </Pressable>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScreen>
   );
 }
 

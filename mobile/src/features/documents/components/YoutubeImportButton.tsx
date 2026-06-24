@@ -11,6 +11,7 @@ import {
 
 import type { SafeDocument } from '../../../api/types';
 import { isValidYouTubeUrl } from '../../../api/services/documents.service';
+import { useInputScrollOnFocus } from '../../../components/layout/useInputScrollOnFocus';
 import { ErrorBanner } from '../../collections/components/ErrorBanner';
 import { useImportYoutube } from '../../../hooks/mutations/useImportYoutube';
 import { getApiErrorMessage } from '../../../lib/apiError';
@@ -35,6 +36,7 @@ export function YoutubeImportButton({
 }: YoutubeImportButtonProps) {
   const { theme } = useTheme();
   const importYoutube = useImportYoutube();
+  const urlField = useInputScrollOnFocus();
   const [url, setUrl] = useState('');
   const [urlError, setUrlError] = useState<string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -106,7 +108,7 @@ export function YoutubeImportButton({
 
   return (
     <View style={styles.container}>
-      <View style={styles.field}>
+      <View ref={urlField.fieldRef} style={styles.field}>
         <TextInput
           accessibilityLabel="YouTube URL"
           autoCapitalize="none"
@@ -115,6 +117,7 @@ export function YoutubeImportButton({
           keyboardType="url"
           placeholder="https://www.youtube.com/watch?v=..."
           placeholderTextColor={theme.colors.textSecondary}
+          returnKeyType="done"
           style={inputStyle}
           value={url}
           onChangeText={(value) => {
@@ -123,6 +126,8 @@ export function YoutubeImportButton({
               setUrlError(null);
             }
           }}
+          onFocus={urlField.createFocusHandler()}
+          onSubmitEditing={handleImport}
         />
         {urlError ? (
           <Text style={[styles.fieldError, { color: theme.colors.error }]}>{urlError}</Text>

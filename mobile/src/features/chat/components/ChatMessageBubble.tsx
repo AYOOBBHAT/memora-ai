@@ -189,12 +189,12 @@ export const ChatMessageBubble = memo(
 const styles = StyleSheet.create({
   rowUser: {
     alignItems: 'flex-end',
-    marginBottom: 20,
-    paddingHorizontal: 20,
+    marginBottom: 14,
+    paddingHorizontal: 16,
   },
   rowAssistant: {
-    marginBottom: 24,
-    paddingHorizontal: 20,
+    marginBottom: 16,
+    paddingHorizontal: 16,
   },
   userColumn: {
     alignItems: 'flex-end',
@@ -202,8 +202,8 @@ const styles = StyleSheet.create({
     maxWidth: '82%',
   },
   userBubble: {
-    paddingHorizontal: 18,
-    paddingVertical: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   userText: {},
   assistantColumn: {
@@ -216,8 +216,8 @@ const styles = StyleSheet.create({
   },
   assistantBubble: {
     borderWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: 18,
-    paddingVertical: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   errorText: {},
   timestamp: {

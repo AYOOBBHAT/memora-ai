@@ -13,40 +13,17 @@ export interface DocumentVisual {
   background: string;
 }
 
-const EDITORIAL_ACCENT = brand.butter;
-const EDITORIAL_BG = brand.butterSubtle;
+const EDITORIAL = {
+  accent: brand.textSecondary,
+  background: 'transparent',
+} as const;
 
 const VISUALS: Record<DocumentSourceType, DocumentVisual> = {
-  pdf: {
-    icon: 'document-text-outline',
-    label: 'PDF',
-    accent: EDITORIAL_ACCENT,
-    background: EDITORIAL_BG,
-  },
-  url: {
-    icon: 'globe-outline',
-    label: 'Website',
-    accent: EDITORIAL_ACCENT,
-    background: EDITORIAL_BG,
-  },
-  youtube: {
-    icon: 'logo-youtube',
-    label: 'YouTube',
-    accent: EDITORIAL_ACCENT,
-    background: EDITORIAL_BG,
-  },
-  text: {
-    icon: 'reader-outline',
-    label: 'Note',
-    accent: EDITORIAL_ACCENT,
-    background: EDITORIAL_BG,
-  },
-  upload: {
-    icon: 'cloud-upload-outline',
-    label: 'Upload',
-    accent: EDITORIAL_ACCENT,
-    background: EDITORIAL_BG,
-  },
+  pdf: { icon: 'document-text-outline', label: 'PDF', ...EDITORIAL },
+  url: { icon: 'globe-outline', label: 'Website', ...EDITORIAL },
+  youtube: { icon: 'logo-youtube', label: 'YouTube', ...EDITORIAL },
+  text: { icon: 'reader-outline', label: 'Note', ...EDITORIAL },
+  upload: { icon: 'cloud-upload-outline', label: 'Upload', ...EDITORIAL },
 };
 
 export function getDocumentVisual(sourceType: DocumentSourceType): DocumentVisual {

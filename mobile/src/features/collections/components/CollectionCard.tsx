@@ -1,17 +1,25 @@
+import { Ionicons } from '@expo/vector-icons';
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { SafeCollection } from '../../../api/types';
+import { formatRelativeTime } from '../../documents/utils/formatDocument';
 import { CollectionIconDisplay } from './CollectionIconDisplay';
 import { useTheme } from '../../../theme/ThemeProvider';
 
 interface CollectionCardProps {
   collection: SafeCollection;
+  documentCount?: number;
   onPress: () => void;
 }
 
-export const CollectionCard = memo(function CollectionCard({ collection, onPress }: CollectionCardProps) {
+export const CollectionCard = memo(function CollectionCard({
+  collection,
+  documentCount = 0,
+  onPress,
+}: CollectionCardProps) {
   const { theme } = useTheme();
+  const countLabel = documentCount === 1 ? '1 document' : `${documentCount} documents`;
 
   return (
     <Pressable
@@ -25,7 +33,7 @@ export const CollectionCard = memo(function CollectionCard({ collection, onPress
           backgroundColor: theme.colors.surface,
           borderColor: theme.colors.border,
           borderRadius: theme.radii.lg,
-          opacity: pressed ? 0.92 : 1,
+          opacity: pressed ? 0.88 : 1,
         },
       ]}
     >
@@ -33,13 +41,13 @@ export const CollectionCard = memo(function CollectionCard({ collection, onPress
         style={[
           styles.iconWrap,
           {
-            backgroundColor: theme.colors.surfaceSecondary,
+            backgroundColor: theme.colors.surfaceElevated,
             borderColor: theme.colors.border,
             borderRadius: theme.radii.md,
           },
         ]}
       >
-        <CollectionIconDisplay color={theme.colors.icon} icon={collection.icon} size={22} />
+        <CollectionIconDisplay color={theme.colors.icon} icon={collection.icon} size={20} />
       </View>
       <View style={styles.textBlock}>
         <Text
@@ -48,59 +56,67 @@ export const CollectionCard = memo(function CollectionCard({ collection, onPress
             styles.name,
             {
               color: theme.colors.text,
-              fontSize: theme.typography.fontSizes.md,
+              fontSize: theme.typography.bodyLarge.fontSize,
               fontWeight: theme.typography.fontWeights.semibold,
+              lineHeight: theme.typography.bodyLarge.lineHeight,
             },
           ]}
         >
           {collection.name}
         </Text>
-        {collection.description ? (
-          <Text
-            numberOfLines={2}
-            style={[
-              styles.description,
-              {
-                color: theme.colors.textSecondary,
-                fontSize: theme.typography.fontSizes.sm,
-              },
-            ]}
-          >
-            {collection.description}
-          </Text>
-        ) : null}
+        <Text
+          numberOfLines={1}
+          style={[
+            styles.subtitle,
+            {
+              color: theme.colors.textMuted,
+              fontSize: theme.typography.caption.fontSize,
+              lineHeight: theme.typography.caption.lineHeight,
+            },
+          ]}
+        >
+          {collection.description?.trim() || countLabel}
+        </Text>
+        <Text
+          numberOfLines={1}
+          style={[
+            styles.meta,
+            {
+              color: theme.colors.textMuted,
+              fontSize: theme.typography.caption.fontSize,
+            },
+          ]}
+        >
+          {countLabel} · Updated {formatRelativeTime(collection.updatedAt).toLowerCase()}
+        </Text>
       </View>
-      <View style={[styles.accentDot, { backgroundColor: theme.colors.primary }]} />
+      <Ionicons color={theme.colors.textMuted} name="chevron-forward" size={18} />
     </Pressable>
   );
 });
 
 const styles = StyleSheet.create({
   card: {
-    borderWidth: 1,
-    flexDirection: 'row',
     alignItems: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
     gap: 14,
-    padding: 16,
+    marginBottom: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
   },
   iconWrap: {
-    width: 48,
-    height: 48,
     alignItems: 'center',
-    justifyContent: 'center',
     borderWidth: StyleSheet.hairlineWidth,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
   },
   textBlock: {
     flex: 1,
     gap: 4,
   },
   name: {},
-  description: {
-    lineHeight: 20,
-  },
-  accentDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
+  subtitle: {},
+  meta: {},
 });
