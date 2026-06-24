@@ -62,6 +62,7 @@ export function ForgotPasswordScreen({ navigation }: Props) {
 
   return (
     <AuthFormLayout
+      brandTagline="Your second brain"
       keyboardVerticalOffset={headerHeight}
       subtitle="Enter your email and choose a new password. We'll enable email reset soon."
       title="Reset password"

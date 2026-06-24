@@ -78,6 +78,7 @@ export function RegisterScreen({ navigation }: Props) {
 
   return (
     <AuthFormLayout
+      brandTagline="Organize everything. Remember anything."
       showBack
       footer={
         <AuthFooterLink

@@ -65,6 +65,7 @@ export function LoginScreen({ navigation }: Props) {
 
   return (
     <AuthFormLayout
+      brandTagline="Your knowledge workspace"
       footer={
         <AuthFooterLink
           actionLabel="Sign up"

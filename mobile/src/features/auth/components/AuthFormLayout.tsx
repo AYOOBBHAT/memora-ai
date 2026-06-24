@@ -5,10 +5,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { KeyboardAwareScreen } from '../../../components/layout/KeyboardAwareScreen';
 import { useTheme } from '../../../theme/ThemeProvider';
+import { AuthBrandHeader } from './AuthBrandHeader';
 
 interface AuthFormLayoutProps {
   title: string;
   subtitle?: string;
+  /** Product tagline under the Memora wordmark. */
+  brandTagline?: string;
   children: ReactNode;
   footer?: ReactNode;
   showBack?: boolean;
@@ -20,6 +23,7 @@ interface AuthFormLayoutProps {
 export function AuthFormLayout({
   title,
   subtitle,
+  brandTagline,
   children,
   footer,
   showBack = false,
@@ -75,40 +79,7 @@ export function AuthFormLayout({
           transform: [{ translateY: slideAnim }],
         }}
       >
-        <View style={styles.brandBlock}>
-          <View
-            style={[
-              styles.brandGlow,
-              {
-                backgroundColor: `${theme.colors.primary}12`,
-                borderRadius: theme.radii.xl,
-              },
-            ]}
-          />
-          <Text
-            style={[
-              styles.brandTitle,
-              {
-                color: theme.colors.primary,
-                fontSize: 26,
-                fontWeight: theme.typography.fontWeights.bold,
-              },
-            ]}
-          >
-            ✨ Memora AI
-          </Text>
-          <Text
-            style={[
-              styles.brandTagline,
-              {
-                color: theme.colors.textSecondary,
-                fontSize: theme.typography.fontSizes.sm,
-              },
-            ]}
-          >
-            Your AI-powered knowledge companion
-          </Text>
-        </View>
+        <AuthBrandHeader tagline={brandTagline} />
 
         <View style={styles.headlineBlock}>
           <Text
@@ -155,27 +126,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginLeft: -4,
     width: 48,
-  },
-  brandBlock: {
-    alignItems: 'flex-start',
-    gap: 6,
-    marginBottom: 24,
-    overflow: 'hidden',
-    paddingVertical: 4,
-  },
-  brandGlow: {
-    height: 72,
-    left: -16,
-    position: 'absolute',
-    right: -16,
-    top: -8,
-  },
-  brandTitle: {
-    letterSpacing: -0.4,
-  },
-  brandTagline: {
-    lineHeight: 20,
-    maxWidth: 280,
   },
   headlineBlock: {
     gap: 8,
