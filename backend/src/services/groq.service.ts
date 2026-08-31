@@ -5,16 +5,9 @@ import { env } from '@/config/env';
 import { HTTP_STATUS } from '@/constants/httpStatus';
 import { ApiError } from '@/utils/ApiError';
 import { stripThinkingTags } from '@/utils/stripThinkingTags';
+import { RAG_SYSTEM_PROMPT, buildGroqUserPrompt } from '@/services/ragPrompt';
 
 const logger = pino({ name: 'groq' });
-
-const SYSTEM_PROMPT = `You are a helpful assistant for Memora AI. Answer the user's question ONLY using the provided context from their personal documents.
-
-Rules:
-- Use only information present in the context. Do not use outside knowledge or invent facts.
-- If the context does not contain enough information to answer, say so clearly.
-- When you can answer, cite which document title(s) support your response.
-- Keep answers concise and directly relevant to the question.`;
 
 let groqClient: Groq | null = null;
 
@@ -120,18 +113,12 @@ export async function generateAnswerFromContext(
     throw configError;
   }
 
-  const prompt = `Context from retrieved documents:
-
-${context}
-
----
-
-User question: ${userQuestion}`;
+  const prompt = buildGroqUserPrompt(context, userQuestion);
 
   try {
     const completion = await client.chat.completions.create(
       groqChatCompletionParams([
-        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: RAG_SYSTEM_PROMPT },
         { role: 'user', content: prompt },
       ]),
     );

@@ -56,10 +56,11 @@ async function main(): Promise<void> {
 
   console.log(formatEvaluationSummary(report));
   console.log(`\nWrote ${reportPath}`);
-  console.log('Failed cases:');
-  for (const result of report.cases.filter((entry) => !entry.pass)) {
+  const failed = report.cases.filter((entry) => !entry.pass);
+  console.log(`Failed cases (${failed.length}):`);
+  for (const result of failed) {
     console.log(
-      `- ${result.id} [${result.categories.join(', ') || 'unclassified'}] ${result.question}`,
+      `- ${result.id} [${result.categories.join(', ') || 'unclassified'}] retrieval=${result.retrievalFailed} injection=${result.injectionVulnerable} ${result.question}`,
     );
   }
 }

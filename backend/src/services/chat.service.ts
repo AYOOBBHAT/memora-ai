@@ -6,6 +6,8 @@ import { extractTextContent } from '@/services/embedding.service';
 
 import { generateAnswerFromContext } from '@/services/groq.service';
 
+import { formatRetrievedDocuments } from '@/services/ragPrompt';
+
 import { searchDocumentsBySemanticQuery } from '@/services/vectorSearch.service';
 
 import type { ChatCitationSource, ChatResponse, SafeDocument, ScoredSearchResult } from '@/types';
@@ -178,35 +180,35 @@ function toCitationSource(result: ScoredSearchResult): ChatCitationSource {
 
 function buildContextFromDocuments(documents: SafeDocument[]): string {
 
-  return documents
+  return formatRetrievedDocuments(
 
-    .map((doc, index) => {
+    documents.map((doc) => {
 
       const content = extractTextContent(doc.content);
 
-      const metadataLine = doc.metadata
+      const metadata =
 
-        ? `Metadata: ${JSON.stringify(doc.metadata)}\n`
+        doc.metadata
 
-        : '';
+          ? `\nMetadata: ${JSON.stringify(doc.metadata)}`
 
+          : '';
 
+      return {
 
-      return `[Document ${index + 1}]
+        id: doc.id,
 
-ID: ${doc.id}
+        title: doc.title,
 
-Title: ${doc.title}
+        sourceType: doc.sourceType,
 
-Source Type: ${doc.sourceType}
+        content: `${content}${metadata}`,
 
-${metadataLine}Content:
+      };
 
-${content}`;
+    }),
 
-    })
-
-    .join('\n\n---\n\n');
+  );
 
 }
 
