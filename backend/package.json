@@ -10,6 +10,7 @@
     "lint": "eslint src --ext .ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "ai-eval": "tsx scripts/run-ai-evaluation.ts",
     "startup-check": "tsx scripts/startup-checklist.ts"
   },
   "keywords": [
