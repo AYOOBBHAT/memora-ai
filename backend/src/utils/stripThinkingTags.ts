@@ -21,6 +21,11 @@ const INNERMOST_THINKING_BLOCK = new RegExp(
  * Supported tags (case-insensitive, multiline): `redacted_thinking`, `think`, `thinking`,
  * `reasoning`. Currently wired in `groq.service.ts`; future Gemini/Ollama chat providers
  * should import and call this function on every completion path.
+ *
+ * GPT-OSS on Groq (`openai/gpt-oss-120b`) puts chain-of-thought in `message.reasoning`,
+ * not XML tags in `message.content`. Groq chat calls also set `include_reasoning: false`.
+ * This strip remains a defensive no-op for clean GPT-OSS answers and still removes tagged
+ * reasoning if a provider ever emits it in content.
  */
 export function stripThinkingTags(text: string): string {
   let result = text;

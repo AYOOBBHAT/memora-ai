@@ -11,15 +11,17 @@ Memora AI uses [Groq](https://console.groq.com/) for RAG chat answer generation.
 
 ## 2. Configure model
 
-Default model: `qwen/qwen3-32b`
+Default model: `openai/gpt-oss-120b`
 
 Override with:
 
 ```env
-GROQ_MODEL=qwen/qwen3-32b
+GROQ_MODEL=openai/gpt-oss-120b
 ```
 
 See [Groq model documentation](https://console.groq.com/docs/models) for available models.
+
+GPT-OSS chat completions use `include_reasoning: false` (reasoning stays out of the user-facing `content` field; `reasoning_format` is not supported on this model) and `reasoning_effort: "low"` for grounded RAG answers with lower latency.
 
 ## 3. Required for features
 
@@ -69,7 +71,7 @@ curl https://your-api.example.com/api/v1/system/chat-health \
   "success": true,
   "message": "Groq chat is healthy",
   "data": {
-    "model": "qwen/qwen3-32b",
+    "model": "openai/gpt-oss-120b",
     "status": "ok",
     "response": "Hello! How can I help you today?"
   }
@@ -83,7 +85,7 @@ curl https://your-api.example.com/api/v1/system/chat-health \
   "success": false,
   "message": "Groq chat health check failed",
   "data": {
-    "model": "qwen/qwen3-32b",
+    "model": "openai/gpt-oss-120b",
     "status": "failed",
     "error": "GROQ_API_KEY is not configured"
   }

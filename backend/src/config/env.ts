@@ -37,7 +37,7 @@ const envSchema = z.object({
   GOOGLE_AI_API_KEY: z.string().min(1).optional(),
   GEMINI_EMBEDDING_MODEL: z.string().default('gemini-embedding-001'),
   GROQ_API_KEY: z.string().min(1).optional(),
-  GROQ_MODEL: z.string().default('qwen/qwen3-32b'),
+  GROQ_MODEL: z.string().default('openai/gpt-oss-120b'),
   VECTOR_SEARCH_INDEX_NAME: z.string().default('document_embedding_index'),
   HEALTH_ENDPOINTS_ENABLED: z
     .string()

@@ -1,4 +1,5 @@
 import Groq from 'groq-sdk';
+import type { ChatCompletionCreateParamsNonStreaming } from 'groq-sdk/resources/chat/completions';
 import pino from 'pino';
 import { env } from '@/config/env';
 import { HTTP_STATUS } from '@/constants/httpStatus';
@@ -66,6 +67,26 @@ function normalizeError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error));
 }
 
+/**
+ * Shared Chat Completions params. Model stays configuration-driven (`env.GROQ_MODEL`).
+ *
+ * GPT-OSS on Groq does not support `reasoning_format`. Reasoning defaults into
+ * `message.reasoning`; `include_reasoning: false` keeps it out of the payload so
+ * users only see `message.content`. `reasoning_effort: "low"` fits RAG over
+ * retrieved context (concise, grounded answers with lower latency) without
+ * disabling reasoning entirely.
+ */
+function groqChatCompletionParams(
+  messages: ChatCompletionCreateParamsNonStreaming['messages'],
+): ChatCompletionCreateParamsNonStreaming {
+  return {
+    model: env.GROQ_MODEL,
+    messages,
+    include_reasoning: false,
+    reasoning_effort: 'low',
+  };
+}
+
 function logGroqError(
   context: { userQuestion: string; contextLength: number },
   error: unknown,
@@ -108,13 +129,12 @@ ${context}
 User question: ${userQuestion}`;
 
   try {
-    const completion = await client.chat.completions.create({
-      model: env.GROQ_MODEL,
-      messages: [
+    const completion = await client.chat.completions.create(
+      groqChatCompletionParams([
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: prompt },
-      ],
-    });
+      ]),
+    );
 
     const rawAnswer = completion.choices[0]?.message?.content;
 
@@ -145,10 +165,9 @@ export async function generateGroqHealthCheckResponse(): Promise<string> {
     throw new Error('GROQ_API_KEY is not configured');
   }
 
-  const completion = await client.chat.completions.create({
-    model: env.GROQ_MODEL,
-    messages: [{ role: 'user', content: 'Say hello' }],
-  });
+  const completion = await client.chat.completions.create(
+    groqChatCompletionParams([{ role: 'user', content: 'Say hello' }]),
+  );
 
   const rawResponse = completion.choices[0]?.message?.content;
 

@@ -114,7 +114,7 @@ Success (Groq responded):
   "success": true,
   "message": "Groq chat is healthy",
   "data": {
-    "model": "qwen/qwen3-32b",
+    "model": "openai/gpt-oss-120b",
     "status": "ok",
     "response": "Hello! How can I help you today?"
   }
@@ -128,7 +128,7 @@ Failure (missing API key or Groq error):
   "success": false,
   "message": "Groq chat health check failed",
   "data": {
-    "model": "qwen/qwen3-32b",
+    "model": "openai/gpt-oss-120b",
     "status": "failed",
     "error": "GROQ_API_KEY is not configured"
   }
@@ -692,4 +692,4 @@ See `backend/.env.example` for all required variables.
 | `GOOGLE_AI_API_KEY` | Required for document embeddings and semantic vector search (Gemini) |
 | `GEMINI_EMBEDDING_MODEL` | Gemini embedding model (default: `gemini-embedding-001`, 768 dimensions via `outputDimensionality`) |
 | `GROQ_API_KEY` | Required for RAG chat answer generation |
-| `GROQ_MODEL` | Groq chat model for RAG answers (default: `qwen/qwen3-32b`) |
+| `GROQ_MODEL` | Groq chat model for RAG answers (default: `openai/gpt-oss-120b`) |

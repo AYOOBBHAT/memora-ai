@@ -23,7 +23,7 @@ File template: `backend/.env.example`
 | `GOOGLE_AI_API_KEY` | For embeddings / search | — | Google AI Studio key for Gemini embeddings |
 | `GEMINI_EMBEDDING_MODEL` | No | `gemini-embedding-001` | Embedding model name |
 | `GROQ_API_KEY` | For RAG chat | — | Groq API key for answer generation |
-| `GROQ_MODEL` | No | `qwen/qwen3-32b` | Groq chat model for RAG |
+| `GROQ_MODEL` | No | `openai/gpt-oss-120b` | Groq chat model for RAG |
 | `VECTOR_SEARCH_INDEX_NAME` | No | `document_embedding_index` | Atlas Vector Search index name on `documents` |
 | `HEALTH_ENDPOINTS_ENABLED` | No | `true` in dev/test; `false` in production | Enables admin-gated `/health` and `/system/chat-health` |
 
