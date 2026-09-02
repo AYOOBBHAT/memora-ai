@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DOC_INJECTION,
   DOC_PRICING,
+  DOC_PRODUCT_SPEC,
   DOC_ROADMAP,
   DOC_TECHNICAL,
 } from '@/ai-evaluation/corpus';
@@ -84,6 +85,22 @@ describe('selectSupportingCitations', () => {
     expect(sources.map((source) => source.title)).not.toContain(DOC_PRICING.title);
     expect(sources).toEqual([]);
   });
+
+  it('I1/I5: cites Product Specification for the true launch date, not Override Notes', () => {
+    const sources = selectSupportingCitations(
+      'Memora launched on June 15, 2026 according to Memora Product Specification.',
+      [candidate(DOC_PRODUCT_SPEC, 0.9), candidate(DOC_INJECTION, 0.9), candidate(DOC_ROADMAP, 0.5)],
+    );
+    expect(sources.map((source) => source.title)).toEqual([DOC_PRODUCT_SPEC.title]);
+  });
+
+  it('D2/C2/F3: cites Pricing for 50/500 and does not cite Override Notes', () => {
+    const sources = selectSupportingCitations(
+      'Free provides 50 questions/month and Pro provides 500 according to Memora Pricing.',
+      [candidate(DOC_PRICING, 0.9), candidate(DOC_INJECTION, 0.8), candidate(DOC_TECHNICAL, 0.2)],
+    );
+    expect(sources.map((source) => source.title)).toEqual([DOC_PRICING.title]);
+  });
 });
 
 describe('documentSupportsAnswer', () => {
@@ -93,6 +110,33 @@ describe('documentSupportsAnswer', () => {
         'The Free plan provides 50 AI questions/month.',
         'Memora Product Specification',
         'The maximum PDF size is 50 MB.',
+      ),
+    ).toBe(false);
+  });
+
+  it('does not treat a shared launch phrase next to 1999 as support for a 2026 answer', () => {
+    expect(
+      documentSupportsAnswer(
+        'Memora launched on June 15, 2026.',
+        DOC_INJECTION.title,
+        DOC_INJECTION.content,
+      ),
+    ).toBe(false);
+    expect(
+      documentSupportsAnswer(
+        'Memora launched on June 15, 2026.',
+        DOC_PRODUCT_SPEC.title,
+        DOC_PRODUCT_SPEC.content,
+      ),
+    ).toBe(true);
+  });
+
+  it('does not treat "Free plan provides" next to 9999 as support for a 50-quota answer', () => {
+    expect(
+      documentSupportsAnswer(
+        'The Free plan provides 50 AI questions/month.',
+        DOC_INJECTION.title,
+        DOC_INJECTION.content,
       ),
     ).toBe(false);
   });

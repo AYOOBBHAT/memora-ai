@@ -76,9 +76,6 @@ function isNumberToken(token: string): boolean {
 }
 
 function neighborOverlapForNumbers(answerTokens: string[], documentTokens: string[], radius = 3): boolean {
-  const answerContent = answerTokens.filter((token) => !STOPWORDS.has(token));
-  const documentContent = documentTokens.filter((token) => !STOPWORDS.has(token));
-
   for (let index = 0; index < answerTokens.length; index += 1) {
     const token = answerTokens[index];
     if (!token || !isNumberToken(token)) {
@@ -112,9 +109,67 @@ function neighborOverlapForNumbers(answerTokens: string[], documentTokens: strin
     if (hasNearbyOverlap) {
       return true;
     }
+  }
 
-    const shared = answerContent.filter((item) => item !== token && documentContent.includes(item));
-    if (shared.length >= 2) {
+  return false;
+}
+
+function answerNumberSet(answerTokens: string[]): Set<string> {
+  return new Set(answerTokens.filter(isNumberToken));
+}
+
+/**
+ * A phrase in the document supports the answer unless it sits next to a number
+ * that the answer did not state (e.g. "Free plan provides 9999" vs an answer of 50).
+ */
+function phraseSupportsAnswerClaim(
+  haystack: string,
+  phrase: string,
+  answerNumbers: Set<string>,
+): boolean {
+  const h = compactCitationText(haystack);
+  const n = compactCitationText(phrase);
+  if (!n) {
+    return false;
+  }
+
+  const locate = (needle: string): number[] => {
+    const indexes: number[] = [];
+    let from = 0;
+    while (from <= h.length) {
+      const idx = h.indexOf(needle, from);
+      if (idx < 0) {
+        break;
+      }
+      indexes.push(idx);
+      from = idx + Math.max(needle.length, 1);
+    }
+    return indexes;
+  };
+
+  const matchIndexes = [...locate(n)];
+  if (matchIndexes.length === 0) {
+    const collapsedH = h.replace(/ /g, '');
+    const collapsedN = n.replace(/ /g, '');
+    if (collapsedN && collapsedH.includes(collapsedN) && answerNumbers.size === 0) {
+      return true;
+    }
+  }
+
+  for (const idx of matchIndexes) {
+    if (answerNumbers.size === 0) {
+      return true;
+    }
+
+    const before = tokenize(h.slice(Math.max(0, idx - 20), idx)).slice(-1);
+    const matched = tokenize(h.slice(idx, idx + n.length));
+    const after = tokenize(h.slice(idx + n.length, Math.min(h.length, idx + n.length + 32))).slice(
+      0,
+      3,
+    );
+    const windowNumbers = [...before, ...matched, ...after].filter(isNumberToken);
+    const hasForeignNumber = windowNumbers.some((num) => !answerNumbers.has(num));
+    if (!hasForeignNumber) {
       return true;
     }
   }
@@ -122,18 +177,12 @@ function neighborOverlapForNumbers(answerTokens: string[], documentTokens: strin
   return false;
 }
 
-function haystackIncludesPhrase(haystack: string, phrase: string): boolean {
-  const h = compactCitationText(haystack);
-  const n = compactCitationText(phrase);
-  if (!n) {
-    return false;
-  }
-  return h.includes(n) || h.replace(/ /g, '').includes(n.replace(/ /g, ''));
-}
-
 /**
  * True when the answer uses factual evidence that appears in this document.
  * Title mention alone is not enough. Retrieval score is not used.
+ *
+ * Documents that only share generic phrasing beside a *different* number or date
+ * than the answer stated are not treated as supporting.
  */
 export function documentSupportsAnswer(answer: string, title: string, content: string): boolean {
   const trimmedAnswer = answer.trim();
@@ -144,23 +193,15 @@ export function documentSupportsAnswer(answer: string, title: string, content: s
   const haystack = `${title}\n${content}`;
   const answerTokens = tokenize(trimmedAnswer);
   const documentTokens = tokenize(haystack);
+  const answerNumbers = answerNumberSet(answerTokens);
 
-  if (answerTokens.some(isNumberToken)) {
-    return neighborOverlapForNumbers(answerTokens, documentTokens);
-  }
-
-  const answerContent = contentTokens(trimmedAnswer);
-  const threeGrams = ngrams(answerContent, 3);
-  if (threeGrams.some((gram) => haystackIncludesPhrase(haystack, gram))) {
+  if (neighborOverlapForNumbers(answerTokens, documentTokens)) {
     return true;
   }
 
-  if (answerContent.length < 3) {
-    const twoGrams = ngrams(answerContent, 2);
-    return twoGrams.some((gram) => haystackIncludesPhrase(haystack, gram));
-  }
-
-  return false;
+  const answerContent = contentTokens(trimmedAnswer);
+  const grams = answerContent.length < 3 ? ngrams(answerContent, 2) : ngrams(answerContent, 3);
+  return grams.some((gram) => phraseSupportsAnswerClaim(haystack, gram, answerNumbers));
 }
 
 /**
