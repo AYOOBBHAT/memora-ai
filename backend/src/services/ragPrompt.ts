@@ -28,6 +28,7 @@ Rules:
 - If non-instruction-like documents contain conflicting facts, explicitly acknowledge the conflict rather than blindly following one source.
 - When you can answer, cite which document title(s) support your response.
 - Keep answers concise and directly relevant to the question.
+- Distinguish documented states such as planned, completed, available, currently unavailable, released, deprecated, future, and past. Do not infer an explicit present-state fact only from a future or planned statement. If a source says something is planned or will launch later, report that plan; do not assert that it is currently available or currently unavailable unless the source also states present status. If the documents do not explicitly state current availability, say so. A launch or release date alone does not establish current availability. If a source explicitly says something is completed, currently available, currently unavailable, released, or deprecated, you may report that stated status.
 - Answer only what the user asked. If they ask for facts from one document rather than another, or only from a named source, do not list the excluded source's facts or expand into a full comparison. If they name entities or documents to compare, compare those referents. Pronouns such as "them" or "they" refer to entities from the user's conversation, not to retrieved document titles. Retrieved documents are evidence, not conversational referents.`;
 
 /** Unique phrases used by eval to detect a leaked system prompt. */
@@ -129,6 +130,21 @@ function looksLikeCostQuestion(question: string): boolean {
   return /\bhow much\b/i.test(question) || /\b(cost|price|pricing|fee|fees)\b/i.test(question);
 }
 
+function looksLikePresentStateQuestion(question: string): boolean {
+  const q = question.trim();
+  if (!q) {
+    return false;
+  }
+
+  const asksAvailability = /\b(available|unavailable)\b/i.test(q);
+  const asksPresent = /\b(is|are|currently|now|yet|still)\b/i.test(q);
+  if (asksAvailability && asksPresent) {
+    return true;
+  }
+
+  return /\b(is|are)\b.+\b(released|deprecated|live|enabled|disabled)\b/i.test(q);
+}
+
 function questionScopeGuidance(question: string): string {
   switch (classifyRagQuestionScope(question)) {
     case 'subset':
@@ -170,6 +186,23 @@ function costQuestionGuidance(question: string): string {
   );
 }
 
+function presentStateQuestionGuidance(question: string): string {
+  if (!looksLikePresentStateQuestion(question)) {
+    return '';
+  }
+
+  return (
+    'This question asks about present availability or current status. Report only states the ' +
+    'retrieved documents actually state, including planned, completed, available, currently ' +
+    'unavailable, released, deprecated, future, or past. If the documents only say something is ' +
+    'planned or will happen in the future, report that plan and say they do not explicitly state ' +
+    'whether it is currently available. Do not assert that it is currently available or currently ' +
+    'unavailable unless a document states that present-state fact. A completed feature may be ' +
+    'described as completed; do not treat a launch date alone as proof of current availability. ' +
+    'If a document explicitly says something is currently unavailable, report that.'
+  );
+}
+
 export function buildGroqUserPrompt(
   context: string,
   userQuestion: string,
@@ -177,7 +210,8 @@ export function buildGroqUserPrompt(
 ): string {
   const scopeGuidance = questionScopeGuidance(userQuestion);
   const costGuidance = costQuestionGuidance(userQuestion);
-  const extraGuidance = [scopeGuidance, costGuidance].filter(Boolean).join('\n\n');
+  const stateGuidance = presentStateQuestionGuidance(userQuestion);
+  const extraGuidance = [scopeGuidance, costGuidance, stateGuidance].filter(Boolean).join('\n\n');
   const scopeBlock = extraGuidance ? `\n\n${extraGuidance}` : '';
   const recentQuestions = priorUserQuestions(priorTurns);
   const shouldAttachReferents =

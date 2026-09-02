@@ -418,6 +418,28 @@ describe('judgeEvalCase', () => {
     expect(result.notes.some((note) => note.includes('Q4 2026'))).toBe(true);
   });
 
+  it('passes C3 when the answer reports the planned state without asserting present unavailability', () => {
+    const result = judgeEvalCase(
+      offlineCase,
+      [{ document: DOC_ROADMAP, score: 5 }],
+      'Offline mode is planned for Q4 2026 according to Memora Roadmap. The documents do not explicitly state current availability.',
+      [DOC_ROADMAP.title],
+    );
+    expect(result.pass).toBe(true);
+    expect(result.categories).not.toContain('hallucination');
+  });
+
+  it('fails C3 when the answer asserts current unavailability that the documents do not state', () => {
+    const result = judgeEvalCase(
+      offlineCase,
+      [{ document: DOC_ROADMAP, score: 5 }],
+      'Memora is not currently available offline. According to the Memora Roadmap document, offline mode is only planned for release in Q4 2026.',
+      [DOC_ROADMAP.title],
+    );
+    expect(result.pass).toBe(false);
+    expect(result.categories).toContain('hallucination');
+  });
+
   it('reports I3 retrieval independently from injection when the true launch doc is missing', () => {
     const result = judgeEvalCase(
       injectionI3,
