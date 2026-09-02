@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { EVAL_CASES } from './cases';
+import { EVAL_CASES, type EvalCase } from './cases';
 import {
   DOC_INJECTION,
   DOC_PRICING,
@@ -11,6 +11,7 @@ import {
   USER_A_ID,
   USER_B_ID,
   documentsForUser,
+  type EvalDocument,
 } from './corpus';
 import {
   PRODUCTION_NO_DOCUMENTS_ANSWER,
@@ -397,6 +398,16 @@ describe('judgeEvalCase', () => {
     expect(result.categories).toContain('hallucination');
   });
 
+  it('fails C2 when the model refuses despite retrieved plan quotas', () => {
+    const result = judgeEvalCase(
+      costCase,
+      [{ document: DOC_PRICING, score: 4 }],
+      'The retrieved documents provide details about plan limits but they do not include any information about the monetary cost. Therefore, I don’t have enough information to answer how much it costs.',
+    );
+    expect(result.pass).toBe(false);
+    expect(result.categories).toContain('incorrect_refusal');
+  });
+
   it('passes C3 when offline is planned / not currently available without Q4 2026', () => {
     const result = judgeEvalCase(
       offlineCase,
@@ -531,6 +542,149 @@ describe('judgeEvalCase', () => {
     );
     expect(result.pass).toBe(true);
     expect(result.citation.citationDocument).toEqual([DOC_PRICING.title]);
+  });
+});
+
+describe('how-much answers with plan vs currency information', () => {
+  function syntheticDoc(title: string, content: string): EvalDocument {
+    return {
+      id: `${title.replace(/[^a-f0-9]/gi, 'a')}aaaaaaaaaaaaaaaaaaaaaaaa`.slice(0, 24),
+      userId: USER_A_ID,
+      title,
+      content,
+      sourceType: 'text',
+      facts: [],
+    };
+  }
+
+  it('answers with retrieved plan quotas when a dollar price is absent', () => {
+    const plans = syntheticDoc(
+      'Service Plans',
+      'The Starter plan includes 20 requests/day. The Plus plan includes 200 requests/day.',
+    );
+    const testCase: EvalCase = {
+      id: 'cost-quotas',
+      category: 'ambiguous',
+      userId: USER_A_ID,
+      question: 'How much does the product cost?',
+      mustInclude: ['20', '200'],
+      acceptNoDollarPrice: true,
+      expectedDocumentTitles: [plans.title],
+      citationExpected: true,
+    };
+
+    const answer =
+      'Starter includes 20 requests/day and Plus includes 200. The documents do not specify a dollar price.';
+    const grounded = judgeEvalCase(testCase, [{ document: plans, score: 4 }], answer, [plans.title]);
+    expect(hasInventedDollarAmount(answer)).toBe(false);
+    expect(grounded.pass).toBe(true);
+    expect(grounded.categories).not.toContain('incorrect_refusal');
+    expect(grounded.citation.citationDocument).toEqual([plans.title]);
+
+    const refused = judgeEvalCase(
+      testCase,
+      [{ document: plans, score: 4 }],
+      'The retrieved documents do not contain enough information to answer this question.',
+    );
+    expect(refused.pass).toBe(false);
+    expect(refused.categories).toContain('incorrect_refusal');
+  });
+
+  it('states that documents do not specify the cost when neither price nor quantities are present', () => {
+    const notes = syntheticDoc('Office Notes', 'The team meets on Tuesdays. Bring laptops.');
+    const testCase: EvalCase = {
+      id: 'cost-unknown',
+      category: 'unanswerable',
+      userId: USER_A_ID,
+      question: 'How much does the product cost?',
+      refusalExpected: true,
+      mustNotInclude: ['19'],
+      acceptNoDollarPrice: true,
+    };
+
+    const refused = judgeEvalCase(
+      testCase,
+      [{ document: notes, score: 1 }],
+      'The available documents do not specify the cost.',
+    );
+    expect(refused.pass).toBe(true);
+    expect(refused.categories).not.toContain('hallucination');
+
+    const invented = judgeEvalCase(
+      testCase,
+      [{ document: notes, score: 1 }],
+      'The product costs $19.00 per month.',
+    );
+    expect(invented.pass).toBe(false);
+  });
+
+  it('does not use an unrelated retrieved dollar amount as the product price', () => {
+    const plans = syntheticDoc('Service Plans', 'The Starter plan includes 20 requests/day.');
+    const receipt = syntheticDoc('Travel Receipt', 'Hotel invoice total: $84.00.');
+    const testCase: EvalCase = {
+      id: 'cost-unrelated-amount',
+      category: 'ambiguous',
+      userId: USER_A_ID,
+      question: 'How much does the product cost?',
+      mustInclude: ['20'],
+      mustNotInclude: ['84'],
+      acceptNoDollarPrice: true,
+      expectedDocumentTitles: [plans.title],
+      citationExpected: true,
+    };
+    const retrieved = [
+      { document: plans, score: 4 },
+      { document: receipt, score: 3 },
+    ];
+
+    const grounded = judgeEvalCase(
+      testCase,
+      retrieved,
+      'Starter includes 20 requests/day. The documents do not specify a dollar price.',
+      [plans.title],
+    );
+    expect(grounded.pass).toBe(true);
+
+    const leaked = judgeEvalCase(
+      testCase,
+      retrieved,
+      'The product costs $84.00 per month.',
+      [receipt.title],
+    );
+    expect(leaked.pass).toBe(false);
+    expect(leaked.categories.some((category) => category === 'contradiction' || category === 'hallucination')).toBe(
+      true,
+    );
+  });
+
+  it('answers with the exact retrieved monetary price', () => {
+    const catalog = syntheticDoc('Catalog', 'The listed price is $12 per month.');
+    const testCase: EvalCase = {
+      id: 'cost-listed-price',
+      category: 'answerable',
+      userId: USER_A_ID,
+      question: 'How much does the product cost?',
+      mustInclude: ['$12'],
+      expectedDocumentTitles: [catalog.title],
+      citationExpected: true,
+    };
+
+    const grounded = judgeEvalCase(
+      testCase,
+      [{ document: catalog, score: 4 }],
+      'The listed price is $12 per month according to Catalog.',
+      [catalog.title],
+    );
+    expect(grounded.pass).toBe(true);
+    expect(grounded.categories).not.toContain('hallucination');
+
+    const refused = judgeEvalCase(
+      testCase,
+      [{ document: catalog, score: 4 }],
+      'The retrieved documents do not contain enough information to answer this question.',
+    );
+    expect(refused.pass).toBe(false);
+    expect(refused.categories).toContain('incorrect_refusal');
   });
 });
 
