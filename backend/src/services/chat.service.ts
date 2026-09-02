@@ -114,6 +114,7 @@ export async function generateRagAnswer(
     toRetrievedBlocks(searchResults.map((result) => result.document)),
     trimmedMessage,
     env.RAG_MAX_CONTEXT_TOKENS,
+    priorTurns,
   );
 
   if (packed.includedCount === 0) {
@@ -136,7 +137,7 @@ export async function generateRagAnswer(
   let answer: string;
 
   try {
-    answer = await generateAnswerFromContext(packed.context, trimmedMessage);
+    answer = await generateAnswerFromContext(packed.context, trimmedMessage, priorTurns);
   } catch (error) {
     await releaseAiQuota(userId).catch((releaseError) => {
       logger.error(

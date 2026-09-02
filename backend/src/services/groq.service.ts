@@ -11,6 +11,7 @@ import {
   maxInputCharactersForTokenBudget,
 } from '@/services/ragContextBudget';
 import { RAG_SYSTEM_PROMPT, buildGroqUserPrompt } from '@/services/ragPrompt';
+import type { RetrievalTurn } from '@/services/retrievalQueryRewrite';
 
 const logger = pino({ name: 'groq' });
 
@@ -77,12 +78,13 @@ function logGroqError(
 export async function generateAnswerFromContext(
   context: string,
   userQuestion: string,
+  priorTurns: RetrievalTurn[] = [],
 ): Promise<string> {
   const client = getGroqClient();
   const questionLength = userQuestion.length;
   const contextLength = context.length;
   const estimatedInputTokens = Math.ceil(
-    groqInputCharacterCount(context, userQuestion) / 4,
+    groqInputCharacterCount(context, userQuestion, priorTurns) / 4,
   );
 
   if (!client) {
@@ -94,14 +96,17 @@ export async function generateAnswerFromContext(
     throw configError;
   }
 
-  if (groqInputCharacterCount(context, userQuestion) > maxInputCharactersForTokenBudget(env.RAG_MAX_CONTEXT_TOKENS)) {
+  if (
+    groqInputCharacterCount(context, userQuestion, priorTurns) >
+    maxInputCharactersForTokenBudget(env.RAG_MAX_CONTEXT_TOKENS)
+  ) {
     throw new ApiError(
       HTTP_STATUS.BAD_REQUEST,
       'This question retrieved more content than Memora can process. Try a more specific question or a smaller document.',
     );
   }
 
-  const prompt = buildGroqUserPrompt(context, userQuestion);
+  const prompt = buildGroqUserPrompt(context, userQuestion, priorTurns);
 
   try {
     const completion = await client.chat.completions.create(

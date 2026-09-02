@@ -17,7 +17,7 @@ import {
 import { retrieveEvalDocuments, type EvalRetrievedDocument } from './retrieve';
 
 export interface EvalGenerateFn {
-  (context: string, question: string): Promise<string>;
+  (context: string, question: string, priorTurns?: RetrievalTurn[]): Promise<string>;
 }
 
 export interface CaseEvaluation {
@@ -142,7 +142,8 @@ export async function evaluateCase(
   retrievalQuery: string;
   selectedSourceTitles: string[];
 }> {
-  const retrievalQuery = evalRetrievalQuery(testCase);
+  const priorTurns = priorTurnsForEvalCase(testCase);
+  const retrievalQuery = rewriteRetrievalQuery(testCase.question, priorTurns);
   const retrieved = retrieveEvalDocuments(testCase.userId, retrievalQuery);
   const groqContext =
     retrieved.length === 0 ? '' : buildEvalContext(retrieved.map((hit) => hit.document));
@@ -151,7 +152,7 @@ export async function evaluateCase(
   if (retrieved.length === 0) {
     answer = PRODUCTION_NO_DOCUMENTS_ANSWER;
   } else {
-    answer = await generate(groqContext, testCase.question);
+    answer = await generate(groqContext, testCase.question, priorTurns);
   }
 
   const selectedSourceTitles = selectSupportingCitations(
@@ -206,7 +207,7 @@ export async function runEvaluation(options: {
       groqContext:
         retrieved.length === 0
           ? '(empty — canned no-documents answer, Groq not called)'
-          : buildGroqUserPrompt(groqContext, testCase.question),
+          : buildGroqUserPrompt(groqContext, testCase.question, priorTurnsForEvalCase(testCase)),
       retrievedScores: retrieved.map((hit) => ({ title: hit.document.title, score: hit.score })),
       retrievalQuery,
       actualAnswer: answer,

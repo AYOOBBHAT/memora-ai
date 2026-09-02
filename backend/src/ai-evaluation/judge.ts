@@ -90,6 +90,7 @@ export function compactText(value: string): string {
     .normalize('NFKC')
     .replace(/[\u200B-\u200D\uFEFF\u00AD]/g, '')
     .replace(/[\u2010-\u2015\u2212\u2043\uFE58\uFE63\uFF0D]/g, '-')
+    .replace(/[\u00B7\u060C\u3001\uFF0C]/g, ',')
     .replace(/[*_`]+/g, '')
     .toLowerCase()
     .replace(/\s+/g, ' ')
@@ -107,8 +108,8 @@ export function flexIncludes(haystack: string, needle: string): boolean {
     return true;
   }
 
-  const hFlat = h.replace(/[\s-]+/g, '');
-  const nFlat = n.replace(/[\s-]+/g, '');
+  const hFlat = h.replace(/[^a-z0-9]+/g, '');
+  const nFlat = n.replace(/[^a-z0-9]+/g, '');
   return nFlat.length > 0 && hFlat.includes(nFlat);
 }
 

@@ -5,6 +5,7 @@ import {
   type RetrievedDocumentBlock,
 } from '@/services/ragPrompt';
 import { selectDocumentsForGeneration } from '@/services/retrievedContextSafety';
+import type { RetrievalTurn } from '@/services/retrievalQueryRewrite';
 
 /**
  * Conservative character-to-token ratio used when a GPT-OSS tokenizer is not available.
@@ -21,16 +22,24 @@ export function estimateTokenCount(text: string): number {
   return Math.ceil(text.length / RAG_CHARS_PER_TOKEN);
 }
 
-export function groqInputCharacterCount(context: string, userQuestion: string): number {
-  return RAG_SYSTEM_PROMPT.length + buildGroqUserPrompt(context, userQuestion).length;
+export function groqInputCharacterCount(
+  context: string,
+  userQuestion: string,
+  priorTurns: RetrievalTurn[] = [],
+): number {
+  return RAG_SYSTEM_PROMPT.length + buildGroqUserPrompt(context, userQuestion, priorTurns).length;
 }
 
 export function maxInputCharactersForTokenBudget(maxTokens: number): number {
   return maxTokens * RAG_CHARS_PER_TOKEN;
 }
 
-function measurePackedInput(documents: RetrievedDocumentBlock[], userQuestion: string): number {
-  return groqInputCharacterCount(formatRetrievedDocuments(documents), userQuestion);
+function measurePackedInput(
+  documents: RetrievedDocumentBlock[],
+  userQuestion: string,
+  priorTurns: RetrievalTurn[] = [],
+): number {
+  return groqInputCharacterCount(formatRetrievedDocuments(documents), userQuestion, priorTurns);
 }
 
 function truncateContentToFit(content: string, maxContentChars: number): string {
@@ -79,6 +88,7 @@ export function packRetrievedDocumentsForGroq(
   documents: RetrievedDocumentBlock[],
   userQuestion: string,
   maxTokens: number,
+  priorTurns: RetrievalTurn[] = [],
 ): PackedGroqContext {
   const maxChars = maxInputCharactersForTokenBudget(maxTokens);
   const selected: RetrievedDocumentBlock[] = [];
@@ -91,15 +101,16 @@ export function packRetrievedDocumentsForGroq(
     };
     const withFull = [...selected, trimmed];
 
-    if (measurePackedInput(withFull, userQuestion) <= maxChars) {
+    if (measurePackedInput(withFull, userQuestion, priorTurns) <= maxChars) {
       selected.push(trimmed);
       continue;
     }
 
-    const selectedChars = measurePackedInput(selected, userQuestion);
+    const selectedChars = measurePackedInput(selected, userQuestion, priorTurns);
     const remaining = maxChars - selectedChars;
     const wrapperChars =
-      measurePackedInput([...selected, { ...trimmed, content: '' }], userQuestion) - selectedChars;
+      measurePackedInput([...selected, { ...trimmed, content: '' }], userQuestion, priorTurns) -
+      selectedChars;
     let contentBudget = remaining - wrapperChars;
 
     if (contentBudget < 32) {
@@ -115,7 +126,7 @@ export function packRetrievedDocumentsForGroq(
       }
 
       const next = { ...trimmed, content: bounded };
-      if (measurePackedInput([...selected, next], userQuestion) <= maxChars) {
+      if (measurePackedInput([...selected, next], userQuestion, priorTurns) <= maxChars) {
         candidate = next;
         break;
       }
@@ -134,13 +145,13 @@ export function packRetrievedDocumentsForGroq(
 
   while (
     finalDocs.length > 0 &&
-    groqInputCharacterCount(finalContext, userQuestion) > maxChars
+    groqInputCharacterCount(finalContext, userQuestion, priorTurns) > maxChars
   ) {
     finalDocs = finalDocs.slice(0, -1);
     finalContext = formatRetrievedDocuments(finalDocs);
   }
 
-  const inputText = `${RAG_SYSTEM_PROMPT}${buildGroqUserPrompt(finalContext, userQuestion)}`;
+  const inputText = `${RAG_SYSTEM_PROMPT}${buildGroqUserPrompt(finalContext, userQuestion, priorTurns)}`;
 
   return {
     context: finalContext,

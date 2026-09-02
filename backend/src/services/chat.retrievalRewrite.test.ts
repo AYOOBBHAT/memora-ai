@@ -81,7 +81,16 @@ describe('generateRagAnswer retrieval rewrite', () => {
     expect(String(vi.mocked(searchDocumentsForChat).mock.calls[0]?.[1]).toLowerCase()).toContain(
       'free',
     );
-    expect(generateAnswerFromContext).toHaveBeenCalledWith(expect.any(String), current);
+    expect(generateAnswerFromContext).toHaveBeenCalledWith(
+      expect.any(String),
+      current,
+      expect.arrayContaining([
+        expect.objectContaining({
+          role: 'user',
+          content: 'How many AI questions does the Free plan provide?',
+        }),
+      ]),
+    );
   });
 
   it('G: retrieval stays scoped to the authenticated userId even if prior text mentions another user', async () => {
