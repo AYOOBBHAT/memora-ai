@@ -184,6 +184,73 @@ describe('subset vs comparison citation selection', () => {
   });
 });
 
+describe('paraphrase and inflection citation matching', () => {
+  const catalog: CitationCandidate = {
+    documentId: 'cccccccccccccccccccccccc',
+    title: 'Format Catalog',
+    sourceType: 'text',
+    score: 0.9,
+    content: 'Format Catalog\n\nSupported formats are Image, Audio, Video and Text.',
+  };
+  const unrelated: CitationCandidate = {
+    documentId: 'dddddddddddddddddddddddd',
+    title: 'Travel Policy',
+    sourceType: 'text',
+    score: 0.4,
+    content: 'Travel Policy\n\nHotel invoice total is 84 dollars. Bring laptops on Tuesdays.',
+  };
+
+  it('cites a document for singular/plural equivalent list claims', () => {
+    const sources = selectSupportingCitations(
+      'The product can import content from Images, audios, Video, and Texts.',
+      [catalog, unrelated],
+    );
+    expect(sources.map((source) => source.title)).toEqual([catalog.title]);
+  });
+
+  it('normalizes capitalization and punctuation when matching a grounded list', () => {
+    const sources = selectSupportingCitations('Supported formats are image, audio, video, and text.', [
+      catalog,
+      unrelated,
+    ]);
+    expect(sources.map((source) => source.title)).toEqual([catalog.title]);
+  });
+
+  it('recognizes a natural paraphrase of a supported-formats statement', () => {
+    const sources = selectSupportingCitations(
+      'The product can import content from **Images, audio, Video, and Text**【1†content】.',
+      [catalog, unrelated],
+    );
+    expect(sources.map((source) => source.title)).toEqual([catalog.title]);
+    expect(sources).toHaveLength(1);
+  });
+
+  it('does not treat an inline citation marker as a source or as a numeric claim', () => {
+    expect(
+      documentSupportsAnswer(
+        'The product can import content from Images, audio, Video, and Text【1†content】.',
+        catalog.title,
+        catalog.content,
+      ),
+    ).toBe(true);
+    expect(
+      documentSupportsAnswer(
+        'The product can import content from Images, audio, Video, and Text【1†content】.',
+        unrelated.title,
+        unrelated.content,
+      ),
+    ).toBe(false);
+  });
+
+  it('does not cite an unrelated retrieved document for a list claim', () => {
+    const sources = selectSupportingCitations(
+      'The product can import content from Images, audio, Video, and Text.',
+      [unrelated, catalog],
+    );
+    expect(sources.map((source) => source.title)).toEqual([catalog.title]);
+  });
+});
+
 describe('documentSupportsAnswer', () => {
   it('does not treat Spec PDF 50 MB as support for a 50-questions answer', () => {
     expect(

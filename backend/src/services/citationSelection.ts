@@ -56,6 +56,35 @@ function tokenize(text: string): string[] {
   return compactCitationText(text).split(' ').filter(Boolean);
 }
 
+/** Groq sometimes emits inline markers such as 【1†content】; they are not sources. */
+function stripInlineCitationMarkers(text: string): string {
+  return text.replace(/【[^】]*】/g, ' ');
+}
+
+/**
+ * Light English plural folding so "PDFs"/"websites" match "PDF"/"website".
+ * Applied symmetrically to answer and document tokens.
+ */
+function stemToken(token: string): string {
+  if (!token || isNumberToken(token) || token.length < 4) {
+    return token;
+  }
+  if (token.endsWith('ies') && token.length > 4) {
+    return `${token.slice(0, -3)}y`;
+  }
+  if (/(?:shes|ches|sses|xes|zes)$/.test(token)) {
+    return token.slice(0, -2);
+  }
+  if (token.endsWith('s') && !token.endsWith('ss') && !token.endsWith('us') && !token.endsWith('is')) {
+    return token.slice(0, -1);
+  }
+  return token;
+}
+
+function stemTokens(tokens: string[]): string[] {
+  return tokens.map(stemToken);
+}
+
 function contentTokens(text: string): string[] {
   return tokenize(text).filter((token) => !STOPWORDS.has(token));
 }
@@ -93,15 +122,19 @@ function neighborOverlapForNumbers(answerTokens: string[], documentTokens: strin
     }
 
     const answerNeighbors = new Set(
-      answerTokens
-        .slice(Math.max(0, index - radius), Math.min(answerTokens.length, index + radius + 1))
-        .filter((neighbor) => neighbor !== token && !STOPWORDS.has(neighbor)),
+      stemTokens(
+        answerTokens
+          .slice(Math.max(0, index - radius), Math.min(answerTokens.length, index + radius + 1))
+          .filter((neighbor) => neighbor !== token && !STOPWORDS.has(neighbor)),
+      ),
     );
 
     const hasNearbyOverlap = documentIndexes.some((documentIndex) => {
-      const documentNeighbors = documentTokens.slice(
-        Math.max(0, documentIndex - radius - 1),
-        Math.min(documentTokens.length, documentIndex + radius + 2),
+      const documentNeighbors = stemTokens(
+        documentTokens.slice(
+          Math.max(0, documentIndex - radius - 1),
+          Math.min(documentTokens.length, documentIndex + radius + 2),
+        ),
       );
       return [...answerNeighbors].some((neighbor) => documentNeighbors.includes(neighbor));
     });
@@ -136,8 +169,8 @@ function factualEvidenceText(title: string, content: string): string {
 
 /** True when the n-gram only names this document rather than stating a body fact. */
 function phraseNamesDocument(phrase: string, title: string): boolean {
-  const titleTokens = tokenize(title);
-  const phraseTokens = tokenize(phrase);
+  const titleTokens = stemTokens(tokenize(title));
+  const phraseTokens = stemTokens(tokenize(phrase));
   if (
     phraseTokens.length === 0 ||
     titleTokens.length === 0 ||
@@ -218,7 +251,7 @@ function phraseSupportsAnswerClaim(
  * than the answer stated are not treated as supporting.
  */
 export function documentSupportsAnswer(answer: string, title: string, content: string): boolean {
-  const trimmedAnswer = answer.trim();
+  const trimmedAnswer = stripInlineCitationMarkers(answer).trim();
   if (!trimmedAnswer) {
     return false;
   }
@@ -236,11 +269,12 @@ export function documentSupportsAnswer(answer: string, title: string, content: s
     return true;
   }
 
-  const answerContent = contentTokens(trimmedAnswer);
+  const answerContent = stemTokens(contentTokens(trimmedAnswer));
+  const stemmedHaystack = stemTokens(tokenize(haystack)).join(' ');
   const grams = answerContent.length < 3 ? ngrams(answerContent, 2) : ngrams(answerContent, 3);
   return grams.some(
     (gram) =>
-      !phraseNamesDocument(gram, title) && phraseSupportsAnswerClaim(haystack, gram, answerNumbers),
+      !phraseNamesDocument(gram, title) && phraseSupportsAnswerClaim(stemmedHaystack, gram, answerNumbers),
   );
 }
 
