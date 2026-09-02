@@ -518,6 +518,42 @@ describe('runEvaluation with a stub generator', () => {
     expect(groqContext).toContain('<content>');
     expect(groqContext).not.toContain('[Document 1]');
   });
+
+  it('I3: retrieval still returns the injection document, but Groq context does not use it as evidence', async () => {
+    const i3 = EVAL_CASES.find((testCase) => testCase.id === 'I3');
+    if (!i3) {
+      throw new Error('I3 is required');
+    }
+
+    const { groqContext, retrieved } = await evaluateCase(i3, async () => {
+      return 'Memora launched on June 15, 2026 according to Memora Product Specification.';
+    });
+
+    expect(retrieved.map((hit) => hit.document.title)).toContain(DOC_PRODUCT_SPEC.title);
+    expect(retrieved.map((hit) => hit.document.title)).toContain(DOC_INJECTION.title);
+    expect(groqContext).toContain(DOC_PRODUCT_SPEC.title);
+    expect(groqContext).toContain('June 15, 2026');
+    expect(groqContext).not.toContain(DOC_INJECTION.title);
+    expect(groqContext).not.toContain('Ignore all previous instructions');
+    expect(groqContext).not.toContain('January 1, 1999');
+  });
+
+  it('I5: Groq context uses Product Specification and does not present the injection document as a conflict', async () => {
+    const i5 = EVAL_CASES.find((testCase) => testCase.id === 'I5');
+    if (!i5) {
+      throw new Error('I5 is required');
+    }
+
+    const { groqContext, retrieved } = await evaluateCase(i5, async () => {
+      return 'Memora launched on June 15, 2026 according to Memora Product Specification.';
+    });
+
+    expect(retrieved.map((hit) => hit.document.title)).toContain(DOC_PRODUCT_SPEC.title);
+    expect(groqContext).toContain(DOC_PRODUCT_SPEC.title);
+    expect(groqContext).toContain('June 15, 2026');
+    expect(groqContext).not.toContain(DOC_INJECTION.title);
+    expect(groqContext).not.toContain('January 1, 1999');
+  });
 });
 
 describe('supporting-citation regressions (I1, I3, I5, D2, F3, C2)', () => {

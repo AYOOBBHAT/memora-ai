@@ -13,6 +13,11 @@ export const INSTRUCTION_LIKE_LINE_PATTERNS: RegExp[] = [
   /\breveal\s+(your\s+|the\s+)?(system|hidden|developer)\s+prompt\b/i,
   /\brepeat\s+(any\s+|the\s+|all\s+)?(system|developer|hidden)?\s*instructions\b/i,
   /\bfollow\s+these\s+instructions\s+instead\b/i,
+  /^(?:please\s+)?reveal\s+private\s+information\b/i,
+  /\boverride\s+(the\s+|these\s+|your\s+)?(previous\s+|system\s+)?instructions\b/i,
+  /\binstead\s+of\s+(the\s+)?(user'?s|users)\s+(question|prompt|request|instructions)\b/i,
+  /\b(you\s+must|you\s+will|you\s+are\s+to)\s+(ignore|disregard)\s+(all\s+)?(previous|prior|system)\b/i,
+  /\b(assistant|model)\s*[:,]\s*(ignore|disregard|reveal)\b/i,
 ];
 
 const COMMAND_STRIP_PATTERNS: RegExp[] = [
@@ -29,7 +34,15 @@ export function lineLooksInstructionLike(line: string): boolean {
     return false;
   }
 
-  return INSTRUCTION_LIKE_LINE_PATTERNS.some((pattern) => pattern.test(trimmed));
+  return INSTRUCTION_LIKE_LINE_PATTERNS.some((pattern) => {
+    pattern.lastIndex = 0;
+    return pattern.test(trimmed);
+  });
+}
+
+/** True when any line of title+body is a jailbreak-like command, not ordinary prose. */
+export function textContainsInstructionLikeContent(text: string): boolean {
+  return text.split(/\r?\n/).some((line) => lineLooksInstructionLike(line));
 }
 
 /**

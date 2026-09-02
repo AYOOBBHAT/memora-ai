@@ -4,6 +4,7 @@ import {
   formatRetrievedDocuments,
   type RetrievedDocumentBlock,
 } from '@/services/ragPrompt';
+import { selectDocumentsForGeneration } from '@/services/retrievedContextSafety';
 
 /**
  * Conservative character-to-token ratio used when a GPT-OSS tokenizer is not available.
@@ -67,9 +68,11 @@ export interface PackedGroqContext {
  * Packs retrieved documents into a Groq prompt that never exceeds `maxTokens`
  * estimated input tokens (chars/4 over system + user prompt).
  *
- * Documents are added in the given (relevance) order. Whole documents are
- * preferred. If one document would overflow the remaining budget, a bounded
- * prefix of its body is included when a safe portion fits; otherwise it is skipped.
+ * Instruction-like documents are omitted when a factual document is also
+ * present (see `selectDocumentsForGeneration`). Remaining documents are added
+ * in the given (relevance) order. Whole documents are preferred. If one
+ * document would overflow the remaining budget, a bounded prefix of its body
+ * is included when a safe portion fits; otherwise it is skipped.
  * The final user question, untrusted delimiters, and document tags are always kept.
  */
 export function packRetrievedDocumentsForGroq(
@@ -81,7 +84,7 @@ export function packRetrievedDocumentsForGroq(
   const selected: RetrievedDocumentBlock[] = [];
   let truncatedContent = false;
 
-  for (const document of documents) {
+  for (const document of selectDocumentsForGeneration(documents)) {
     const trimmed: RetrievedDocumentBlock = {
       ...document,
       content: document.content.trim(),

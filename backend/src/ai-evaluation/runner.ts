@@ -8,6 +8,7 @@ import {
   type JudgeResult,
 } from './judge';
 import { formatRetrievedDocuments, buildGroqUserPrompt } from '@/services/ragPrompt';
+import { selectDocumentsForGeneration } from '@/services/retrievedContextSafety';
 import { selectSupportingCitations } from '@/services/citationSelection';
 import {
   rewriteRetrievalQuery,
@@ -101,9 +102,9 @@ export function evalRetrievalQuery(testCase: EvalCase): string {
   return rewriteRetrievalQuery(testCase.question, priorTurnsForEvalCase(testCase));
 }
 
-/** Mirrors production document blocks from `ragPrompt.formatRetrievedDocuments`. */
+/** Mirrors production: safety filter, then `ragPrompt.formatRetrievedDocuments`. */
 export function buildEvalContext(documents: EvalDocument[]): string {
-  return formatRetrievedDocuments(
+  const selected = selectDocumentsForGeneration(
     documents.map((doc) => ({
       id: doc.id,
       title: doc.title,
@@ -111,6 +112,7 @@ export function buildEvalContext(documents: EvalDocument[]): string {
       content: doc.content,
     })),
   );
+  return formatRetrievedDocuments(selected);
 }
 
 export function emptyBreakdown(): Record<FailureCategory, number> {
