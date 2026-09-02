@@ -188,6 +188,7 @@ export function judgeEvalCase(
   testCase: EvalCase,
   retrieved: EvalRetrievedDocument[],
   answer: string,
+  selectedSourceTitles?: string[],
 ): JudgeResult {
   const notes: string[] = [];
   const categories: FailureCategory[] = [];
@@ -334,11 +335,34 @@ export function judgeEvalCase(
     );
   }
 
-  const citationPresent = retrieved.length > 0;
+  const hasSelectedSources = selectedSourceTitles !== undefined;
+  const selectedTitles = hasSelectedSources ? [...new Set(selectedSourceTitles)] : retrievedTitles;
+  const fabricatedSources = hasSelectedSources
+    ? selectedTitles.filter((title) => !retrievedTitles.includes(title))
+    : [];
+  if (fabricatedSources.length > 0) {
+    categories.push('incorrect_citation');
+    notes.push(`API sources include documents that were not retrieved: ${fabricatedSources.join(', ')}`);
+  }
+
+  const forbiddenApiCitations = hasSelectedSources
+    ? (testCase.forbiddenCitationTitles ?? []).filter((title) => selectedTitles.includes(title))
+    : [];
+  if (forbiddenApiCitations.length > 0) {
+    categories.push('incorrect_citation');
+    notes.push(
+      `API sources list retrieved documents that do not support the answer: ${forbiddenApiCitations.join(', ')}`,
+    );
+  }
+
+  const citationPresent = hasSelectedSources ? selectedTitles.length > 0 : retrieved.length > 0;
   const citationCorrect =
     expectedTitles.length === 0
-      ? incorrectlyCited.length === 0
-      : expectedTitles.every((title) => retrievedTitles.includes(title)) && incorrectlyCited.length === 0;
+      ? incorrectlyCited.length === 0 && fabricatedSources.length === 0 && forbiddenApiCitations.length === 0
+      : expectedTitles.every((title) => retrievedTitles.includes(title)) &&
+        incorrectlyCited.length === 0 &&
+        fabricatedSources.length === 0 &&
+        forbiddenApiCitations.length === 0;
 
   if (testCase.citationExpected && !testCase.refusalExpected && !testCase.passOnNoLeak && !refused) {
     if (!citationPresent) {
@@ -347,6 +371,18 @@ export function judgeEvalCase(
     } else if (expectedTitles.some((title) => !retrievedTitles.includes(title))) {
       categories.push('incorrect_citation');
       notes.push('Supporting document was not among API sources (retrieval miss).');
+    } else if (
+      hasSelectedSources &&
+      !goldWaivedByNoPrice &&
+      goldSatisfied &&
+      expectedTitles.some((title) => retrievedTitles.includes(title) && !selectedTitles.includes(title))
+    ) {
+      categories.push('incorrect_citation');
+      notes.push(
+        `Supporting document was retrieved but not selected as an API source: ${expectedTitles
+          .filter((title) => retrievedTitles.includes(title) && !selectedTitles.includes(title))
+          .join(', ')}`,
+      );
     }
   }
 
@@ -361,7 +397,7 @@ export function judgeEvalCase(
     citation: {
       citationPresent,
       citationCorrect,
-      citationDocument: retrievedTitles,
+      citationDocument: selectedTitles,
       supportingTextAvailable,
     },
     notes,

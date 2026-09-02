@@ -38,6 +38,24 @@ const envSchema = z.object({
   GEMINI_EMBEDDING_MODEL: z.string().default('gemini-embedding-001'),
   GROQ_API_KEY: z.string().min(1).optional(),
   GROQ_MODEL: z.string().default('openai/gpt-oss-120b'),
+  /**
+   * Estimated max Groq input tokens (chars/4) for system + retrieved docs + question.
+   * Capped so an env typo cannot reopen the 131k context window.
+   */
+  RAG_MAX_CONTEXT_TOKENS: z.coerce.number().int().min(4_000).max(32_000).default(24_000),
+  /**
+   * Groq max_completion_tokens. Default 1024 keeps answers concise and caps cost.
+   * Hard-capped at 2048 so an env typo cannot restore 65k completions.
+   */
+  GROQ_MAX_COMPLETION_TOKENS: z.coerce.number().int().min(256).max(2_048).default(1_024),
+  /** PDF page cap after extraction. Cannot be raised above 50. */
+  PDF_MAX_PAGES: z.coerce.number().int().min(1).max(50).default(50),
+  /** PDF extracted-text cap after extraction. Cannot be raised above 50_000. */
+  PDF_MAX_EXTRACTED_CHARS: z.coerce.number().int().min(5_000).max(50_000).default(50_000),
+  /** Per-user UTC-day AI (Groq) request cap. Abuse protection, not a billing plan. */
+  AI_DAILY_REQUEST_LIMIT: z.coerce.number().int().min(1).max(200).default(50),
+  /** Per-user UTC-day accepted PDF upload cap. Abuse protection, not a billing plan. */
+  UPLOAD_DAILY_LIMIT: z.coerce.number().int().min(1).max(50).default(20),
   VECTOR_SEARCH_INDEX_NAME: z.string().default('document_embedding_index'),
   HEALTH_ENDPOINTS_ENABLED: z
     .string()

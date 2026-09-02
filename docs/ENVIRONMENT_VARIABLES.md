@@ -24,6 +24,12 @@ File template: `backend/.env.example`
 | `GEMINI_EMBEDDING_MODEL` | No | `gemini-embedding-001` | Embedding model name |
 | `GROQ_API_KEY` | For RAG chat | — | Groq API key for answer generation |
 | `GROQ_MODEL` | No | `openai/gpt-oss-120b` | Groq chat model for RAG |
+| `RAG_MAX_CONTEXT_TOKENS` | No | `24000` | Estimated max Groq **input** tokens (chars/4) for system + retrieved docs + question. Allowed range 4000–32000 |
+| `GROQ_MAX_COMPLETION_TOKENS` | No | `1024` | Groq `max_completion_tokens`. Allowed range 256–2048. 1024 keeps RAG answers short and caps cost |
+| `PDF_MAX_PAGES` | No | `50` | Max PDF pages after extraction. Cannot be raised above 50 |
+| `PDF_MAX_EXTRACTED_CHARS` | No | `50000` | Max extracted PDF text. Cannot be raised above 50000. Notes/URL/YouTube are unaffected |
+| `AI_DAILY_REQUEST_LIMIT` | No | `50` | Per-user Groq chat requests per **UTC** day. Abuse cap, not a billing plan |
+| `UPLOAD_DAILY_LIMIT` | No | `20` | Per-user accepted PDF uploads per **UTC** day |
 | `VECTOR_SEARCH_INDEX_NAME` | No | `document_embedding_index` | Atlas Vector Search index name on `documents` |
 | `HEALTH_ENDPOINTS_ENABLED` | No | `true` in dev/test; `false` in production | Enables admin-gated `/health` and `/system/chat-health` |
 
@@ -69,6 +75,7 @@ GROQ_API_KEY=...
 - **Liveness** (`GET /api/v1/health/live`) is always public and does not depend on `HEALTH_ENDPOINTS_ENABLED`.
 - **Admin health** endpoints require `HEALTH_ENDPOINTS_ENABLED=true` plus `Authorization: Bearer <admin_access_token>`.
 - Omitting optional AI keys disables those features but the API still starts if core auth/DB vars are set.
+- **Quotas** (`AI_DAILY_REQUEST_LIMIT`, `UPLOAD_DAILY_LIMIT`) are per authenticated user, counted on a **UTC calendar day**, and are abuse caps rather than subscription entitlements.
 
 ---
 

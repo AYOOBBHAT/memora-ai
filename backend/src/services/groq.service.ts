@@ -4,7 +4,12 @@ import pino from 'pino';
 import { env } from '@/config/env';
 import { HTTP_STATUS } from '@/constants/httpStatus';
 import { ApiError } from '@/utils/ApiError';
+import { safeErrorLogFields } from '@/utils/safeLog';
 import { stripThinkingTags } from '@/utils/stripThinkingTags';
+import {
+  groqInputCharacterCount,
+  maxInputCharactersForTokenBudget,
+} from '@/services/ragContextBudget';
 import { RAG_SYSTEM_PROMPT, buildGroqUserPrompt } from '@/services/ragPrompt';
 
 const logger = pino({ name: 'groq' });
@@ -23,39 +28,6 @@ function getGroqClient(): Groq | null {
   return groqClient;
 }
 
-function safeStringify(value: unknown): string {
-  try {
-    const seen = new WeakSet<object>();
-
-    return JSON.stringify(
-      value,
-      (_key, val) => {
-        if (val instanceof Error) {
-          return {
-            name: val.name,
-            message: val.message,
-            stack: val.stack,
-            ...(val.cause !== undefined ? { cause: val.cause } : {}),
-          };
-        }
-
-        if (typeof val === 'object' && val !== null) {
-          if (seen.has(val)) {
-            return '[Circular]';
-          }
-
-          seen.add(val);
-        }
-
-        return val;
-      },
-      2,
-    );
-  } catch {
-    return String(value);
-  }
-}
-
 function normalizeError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error));
 }
@@ -68,8 +40,11 @@ function normalizeError(error: unknown): Error {
  * users only see `message.content`. `reasoning_effort: "low"` fits RAG over
  * retrieved context (concise, grounded answers with lower latency) without
  * disabling reasoning entirely.
+ *
+ * `max_completion_tokens` defaults to 1024: RAG answers are prompted to stay
+ * concise, and leaving this unset would allow up to 65,536 completion tokens.
  */
-function groqChatCompletionParams(
+export function groqChatCompletionParams(
   messages: ChatCompletionCreateParamsNonStreaming['messages'],
 ): ChatCompletionCreateParamsNonStreaming {
   return {
@@ -77,25 +52,26 @@ function groqChatCompletionParams(
     messages,
     include_reasoning: false,
     reasoning_effort: 'low',
+    max_completion_tokens: env.GROQ_MAX_COMPLETION_TOKENS,
   };
 }
 
 function logGroqError(
-  context: { userQuestion: string; contextLength: number },
+  context: { questionLength: number; contextLength: number; estimatedInputTokens?: number },
   error: unknown,
 ): void {
   const err = normalizeError(error);
   const payload = {
+    ...safeErrorLogFields(error),
     message: err.message,
-    stack: err.stack,
-    errorJson: safeStringify(error),
     model: env.GROQ_MODEL,
     contextLength: context.contextLength,
-    userQuestion: context.userQuestion,
+    questionLength: context.questionLength,
+    estimatedInputTokens: context.estimatedInputTokens,
+    maxCompletionTokens: env.GROQ_MAX_COMPLETION_TOKENS,
   };
 
   logger.error(payload, '[GROQ_ERROR] Groq chat request failed');
-  console.error('[GROQ_ERROR]', payload);
 }
 
 export async function generateAnswerFromContext(
@@ -103,14 +79,26 @@ export async function generateAnswerFromContext(
   userQuestion: string,
 ): Promise<string> {
   const client = getGroqClient();
+  const questionLength = userQuestion.length;
+  const contextLength = context.length;
+  const estimatedInputTokens = Math.ceil(
+    groqInputCharacterCount(context, userQuestion) / 4,
+  );
 
   if (!client) {
     const configError = new ApiError(
       HTTP_STATUS.INTERNAL_SERVER_ERROR,
       'Chat is unavailable: GROQ_API_KEY is not configured',
     );
-    logGroqError({ userQuestion, contextLength: context.length }, configError);
+    logGroqError({ questionLength, contextLength, estimatedInputTokens }, configError);
     throw configError;
+  }
+
+  if (groqInputCharacterCount(context, userQuestion) > maxInputCharactersForTokenBudget(env.RAG_MAX_CONTEXT_TOKENS)) {
+    throw new ApiError(
+      HTTP_STATUS.BAD_REQUEST,
+      'This question retrieved more content than Memora can process. Try a more specific question or a smaller document.',
+    );
   }
 
   const prompt = buildGroqUserPrompt(context, userQuestion);
@@ -137,7 +125,11 @@ export async function generateAnswerFromContext(
 
     return answer;
   } catch (error) {
-    logGroqError({ userQuestion, contextLength: context.length }, error);
+    if (error instanceof ApiError) {
+      throw error;
+    }
+
+    logGroqError({ questionLength, contextLength, estimatedInputTokens }, error);
     throw new ApiError(
       HTTP_STATUS.INTERNAL_SERVER_ERROR,
       'Failed to generate chat response. Please try again later.',

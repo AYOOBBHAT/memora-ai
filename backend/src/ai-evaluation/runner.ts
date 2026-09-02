@@ -8,6 +8,11 @@ import {
   type JudgeResult,
 } from './judge';
 import { formatRetrievedDocuments, buildGroqUserPrompt } from '@/services/ragPrompt';
+import { selectSupportingCitations } from '@/services/citationSelection';
+import {
+  rewriteRetrievalQuery,
+  type RetrievalTurn,
+} from '@/services/retrievalQueryRewrite';
 import { retrieveEvalDocuments, type EvalRetrievedDocument } from './retrieve';
 
 export interface EvalGenerateFn {
@@ -24,6 +29,7 @@ export interface CaseEvaluation {
   retrievedContext: string;
   groqContext: string;
   retrievedScores: Array<{ title: string; score: number }>;
+  retrievalQuery: string;
   actualAnswer: string;
   citationPresent: boolean;
   citationCorrect: boolean;
@@ -75,6 +81,26 @@ export function describeExpectedBehavior(testCase: EvalCase): string {
   return parts.join(' ') || 'See case definition.';
 }
 
+/** Prior user turns in the same follow-up group, same user, earlier turn only. */
+export function priorTurnsForEvalCase(testCase: EvalCase): RetrievalTurn[] {
+  if (!testCase.followUpGroup || (testCase.turn ?? 1) <= 1) {
+    return [];
+  }
+
+  return EVAL_CASES.filter(
+    (candidate) =>
+      candidate.followUpGroup === testCase.followUpGroup &&
+      candidate.userId === testCase.userId &&
+      (candidate.turn ?? 0) < (testCase.turn ?? 0),
+  )
+    .sort((left, right) => (left.turn ?? 0) - (right.turn ?? 0))
+    .map((candidate) => ({ role: 'user' as const, content: candidate.question }));
+}
+
+export function evalRetrievalQuery(testCase: EvalCase): string {
+  return rewriteRetrievalQuery(testCase.question, priorTurnsForEvalCase(testCase));
+}
+
 /** Mirrors production document blocks from `ragPrompt.formatRetrievedDocuments`. */
 export function buildEvalContext(documents: EvalDocument[]): string {
   return formatRetrievedDocuments(
@@ -106,8 +132,16 @@ export function emptyBreakdown(): Record<FailureCategory, number> {
 export async function evaluateCase(
   testCase: EvalCase,
   generate: EvalGenerateFn,
-): Promise<{ retrieved: EvalRetrievedDocument[]; answer: string; judge: JudgeResult; groqContext: string }> {
-  const retrieved = retrieveEvalDocuments(testCase.userId, testCase.question);
+): Promise<{
+  retrieved: EvalRetrievedDocument[];
+  answer: string;
+  judge: JudgeResult;
+  groqContext: string;
+  retrievalQuery: string;
+  selectedSourceTitles: string[];
+}> {
+  const retrievalQuery = evalRetrievalQuery(testCase);
+  const retrieved = retrieveEvalDocuments(testCase.userId, retrievalQuery);
   const groqContext =
     retrieved.length === 0 ? '' : buildEvalContext(retrieved.map((hit) => hit.document));
 
@@ -118,11 +152,24 @@ export async function evaluateCase(
     answer = await generate(groqContext, testCase.question);
   }
 
+  const selectedSourceTitles = selectSupportingCitations(
+    answer,
+    retrieved.map((hit) => ({
+      documentId: hit.document.id,
+      title: hit.document.title,
+      sourceType: hit.document.sourceType,
+      score: hit.score,
+      content: hit.document.content,
+    })),
+  ).map((source) => source.title);
+
   return {
     retrieved,
     answer,
     groqContext,
-    judge: judgeEvalCase(testCase, retrieved, answer),
+    retrievalQuery,
+    selectedSourceTitles,
+    judge: judgeEvalCase(testCase, retrieved, answer, selectedSourceTitles),
   };
 }
 
@@ -137,7 +184,10 @@ export async function runEvaluation(options: {
   const breakdown = emptyBreakdown();
 
   for (const testCase of cases) {
-    const { retrieved, answer, groqContext, judge } = await evaluateCase(testCase, options.generate);
+    const { retrieved, answer, groqContext, retrievalQuery, selectedSourceTitles, judge } = await evaluateCase(
+      testCase,
+      options.generate,
+    );
 
     for (const category of judge.categories) {
       breakdown[category] += 1;
@@ -156,10 +206,11 @@ export async function runEvaluation(options: {
           ? '(empty — canned no-documents answer, Groq not called)'
           : buildGroqUserPrompt(groqContext, testCase.question),
       retrievedScores: retrieved.map((hit) => ({ title: hit.document.title, score: hit.score })),
+      retrievalQuery,
       actualAnswer: answer,
       citationPresent: judge.citation.citationPresent,
       citationCorrect: judge.citation.citationCorrect,
-      citationDocument: judge.citation.citationDocument,
+      citationDocument: selectedSourceTitles,
       supportingTextAvailable: judge.citation.supportingTextAvailable,
       retrievalFailed: judge.retrievalFailed,
       injectionVulnerable: judge.injectionVulnerable,
@@ -192,6 +243,7 @@ export function formatFailedCaseEvidence(result: CaseEvaluation): string {
     `Expected: ${result.expectedBehavior}`,
     `Actual: ${result.actualAnswer}`,
     `Retrieved: ${result.retrievedTitles.join(', ') || '(none)'}`,
+    `Retrieval query: ${result.retrievalQuery}`,
     `Scores: ${result.retrievedScores.map((hit) => `${hit.title}=${hit.score}`).join('; ') || '(none)'}`,
     `Citations: ${result.citationDocument.join(', ') || '(none)'}`,
     `Retrieval failed: ${result.retrievalFailed}`,

@@ -18,9 +18,7 @@ export const chatHandler = asyncHandler(async (req: Request, res: Response) => {
     const result = await sendChatWithPersistence(req.user!.id, input);
     ApiResponse.success(res, 'Chat response generated', result);
   } catch (error) {
-    const userQuestion =
-      typeof input.message === 'string' ? input.message.trim() : String(input.message ?? '');
-    logChatError({ userQuestion }, error);
+    logChatError({}, error);
     throw error;
   }
 });

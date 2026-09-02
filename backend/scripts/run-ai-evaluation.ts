@@ -5,7 +5,7 @@ import { EVAL_CASES } from '../src/ai-evaluation/cases';
 import { retrieveEvalDocuments } from '../src/ai-evaluation/retrieve';
 import { env } from '../src/config/env';
 import { generateAnswerFromContext } from '../src/services/groq.service';
-import { formatEvaluationSummary, runEvaluation } from '../src/ai-evaluation/runner';
+import { evalRetrievalQuery, formatEvaluationSummary, runEvaluation } from '../src/ai-evaluation/runner';
 
 function printRetrievalAudit(): void {
   console.log('Retrieval audit (eval lexical retriever, no Groq)\n');
@@ -14,7 +14,7 @@ function printRetrievalAudit(): void {
   let isolationLeaks = 0;
 
   for (const testCase of EVAL_CASES) {
-    const hits = retrieveEvalDocuments(testCase.userId, testCase.question);
+    const hits = retrieveEvalDocuments(testCase.userId, evalRetrievalQuery(testCase));
     const titles = hits.map((hit) => hit.document.title);
     const missing = (testCase.expectedDocumentTitles ?? []).filter((title) => !titles.includes(title));
     const leaked = (testCase.forbiddenDocumentTitles ?? []).filter((title) => titles.includes(title));

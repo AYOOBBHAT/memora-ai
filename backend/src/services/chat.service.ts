@@ -1,353 +1,168 @@
 import pino from 'pino';
 
 import { env } from '@/config/env';
-
 import { extractTextContent } from '@/services/embedding.service';
-
 import { generateAnswerFromContext } from '@/services/groq.service';
-
-import { formatRetrievedDocuments } from '@/services/ragPrompt';
-
-import { searchDocumentsBySemanticQuery } from '@/services/vectorSearch.service';
-
-import type { ChatCitationSource, ChatResponse, SafeDocument, ScoredSearchResult } from '@/types';
-
+import { packRetrievedDocumentsForGroq } from '@/services/ragContextBudget';
+import type { RetrievedDocumentBlock } from '@/services/ragPrompt';
+import { consumeAiQuota, releaseAiQuota } from '@/services/quota.service';
+import { rewriteRetrievalQuery, type RetrievalTurn } from '@/services/retrievalQueryRewrite';
+import { selectSupportingCitations } from '@/services/citationSelection';
+import { searchDocumentsForChat } from '@/services/vectorSearch.service';
+import type { ChatResponse, SafeDocument } from '@/types';
 import { ApiError } from '@/utils/ApiError';
-
 import { HTTP_STATUS } from '@/constants/httpStatus';
-
-
+import { safeErrorLogFields } from '@/utils/safeLog';
 
 const logger = pino({ name: 'chat' });
 
-
-
 interface ChatDiagnosticContext {
-
-  userQuestion: string;
-
   documentCount?: number;
-
+  packedDocumentCount?: number;
   contextLength?: number;
-
+  estimatedInputTokens?: number;
+  truncatedContent?: boolean;
+  retrievalRewritten?: boolean;
 }
-
-
-
-function safeStringify(value: unknown): string {
-
-  try {
-
-    const seen = new WeakSet<object>();
-
-
-
-    return JSON.stringify(
-
-      value,
-
-      (_key, val) => {
-
-        if (val instanceof Error) {
-
-          return {
-
-            name: val.name,
-
-            message: val.message,
-
-            stack: val.stack,
-
-            ...(val.cause !== undefined ? { cause: val.cause } : {}),
-
-          };
-
-        }
-
-
-
-        if (typeof val === 'object' && val !== null) {
-
-          if (seen.has(val)) {
-
-            return '[Circular]';
-
-          }
-
-
-
-          seen.add(val);
-
-        }
-
-
-
-        return val;
-
-      },
-
-      2,
-
-    );
-
-  } catch {
-
-    return String(value);
-
-  }
-
-}
-
-
-
-function normalizeError(error: unknown): Error {
-
-  return error instanceof Error ? error : new Error(String(error));
-
-}
-
-
 
 export function logChatError(context: ChatDiagnosticContext, error: unknown): void {
-
-  const err = normalizeError(error);
-
   const payload = {
-
-    message: err.message,
-
-    stack: err.stack,
-
-    errorJson: safeStringify(error),
-
+    ...safeErrorLogFields(error),
     groqModel: env.GROQ_MODEL,
-
     documentCount: context.documentCount,
-
+    packedDocumentCount: context.packedDocumentCount,
     contextLength: context.contextLength,
-
-    userQuestion: context.userQuestion,
-
+    estimatedInputTokens: context.estimatedInputTokens,
   };
-
-
 
   logger.error(payload, '[CHAT_ERROR] Chat request failed');
-
-  console.error('[CHAT_ERROR]', payload);
-
 }
 
-
-
-function logChatDiag(
-
-  step: string,
-
-  context: ChatDiagnosticContext & { model?: string },
-
-): void {
-
-  const payload = { step, ...context };
-
-
-
-  logger.info(payload, `[CHAT_DIAG] ${step}`);
-
-  console.log('[CHAT_DIAG]', payload);
-
+function logChatDiag(step: string, context: ChatDiagnosticContext & { model?: string }): void {
+  logger.info({ step, ...context }, `[CHAT_DIAG] ${step}`);
 }
 
+function toRetrievedBlocks(documents: SafeDocument[]): RetrievedDocumentBlock[] {
+  return documents.map((doc) => {
+    const content = extractTextContent(doc.content);
+    const metadata = doc.metadata ? `\nMetadata: ${JSON.stringify(doc.metadata)}` : '';
 
-
-function toCitationSource(result: ScoredSearchResult): ChatCitationSource {
-
-  return {
-
-    documentId: result.document.id,
-
-    title: result.document.title,
-
-    sourceType: result.document.sourceType,
-
-    score: result.score,
-
-  };
-
+    return {
+      id: doc.id,
+      title: doc.title,
+      sourceType: doc.sourceType,
+      content: `${content}${metadata}`,
+    };
+  });
 }
-
-
-
-function buildContextFromDocuments(documents: SafeDocument[]): string {
-
-  return formatRetrievedDocuments(
-
-    documents.map((doc) => {
-
-      const content = extractTextContent(doc.content);
-
-      const metadata =
-
-        doc.metadata
-
-          ? `\nMetadata: ${JSON.stringify(doc.metadata)}`
-
-          : '';
-
-      return {
-
-        id: doc.id,
-
-        title: doc.title,
-
-        sourceType: doc.sourceType,
-
-        content: `${content}${metadata}`,
-
-      };
-
-    }),
-
-  );
-
-}
-
-
 
 function noDocumentsAnswer(): ChatResponse {
-
   return {
-
     answer:
-
       "I couldn't find any relevant documents in your knowledge base to answer this question. " +
-
       'Try adding documents with related content or rephrasing your question.',
-
     sources: [],
-
   };
-
 }
 
-
-
 /**
-
  * Generates a RAG answer for a user question using semantic document retrieval
-
  * and Groq generative chat. User isolation is enforced via `userId` only.
-
  *
-
  * @param userId - Authenticated user ID; retrieval is scoped to this user only.
-
  * @param message - User question or prompt.
-
  * @param collectionIds - Optional collection IDs to limit retrieval to specific owned collections.
-
+ * @param priorTurns - Optional recent turns from the same owned conversation; used only to rewrite the retrieval query.
  */
-
 export async function generateRagAnswer(
-
   userId: string,
-
   message: string,
-
   collectionIds?: string[],
-
+  priorTurns: RetrievalTurn[] = [],
 ): Promise<ChatResponse> {
-
   if (!userId) {
-
     throw new ApiError(HTTP_STATUS.UNAUTHORIZED, 'Authenticated user is required');
-
   }
-
-
 
   const trimmedMessage = message.trim();
 
-
-
   if (!trimmedMessage) {
-
     throw new ApiError(HTTP_STATUS.BAD_REQUEST, 'Message cannot be empty');
-
   }
 
+  const retrievalQuery = rewriteRetrievalQuery(trimmedMessage, priorTurns);
 
-
-  const searchResults = await searchDocumentsBySemanticQuery(
-
+  const searchResults = await searchDocumentsForChat(
     userId,
-
-    trimmedMessage,
-
+    retrievalQuery,
     5,
-
     collectionIds,
-
   );
 
-
-
   if (searchResults.length === 0) {
-
     return noDocumentsAnswer();
-
   }
 
-
-
   const diagnosticContext: ChatDiagnosticContext = {
-
-    userQuestion: trimmedMessage,
-
     documentCount: searchResults.length,
-
+    retrievalRewritten: retrievalQuery !== trimmedMessage,
   };
-
-
 
   logChatDiag('after_vector_search', diagnosticContext);
 
+  const packed = packRetrievedDocumentsForGroq(
+    toRetrievedBlocks(searchResults.map((result) => result.document)),
+    trimmedMessage,
+    env.RAG_MAX_CONTEXT_TOKENS,
+  );
 
+  if (packed.includedCount === 0) {
+    return noDocumentsAnswer();
+  }
 
-  const documents = searchResults.map((result) => result.document);
-
-  const context = buildContextFromDocuments(documents);
-
-
-
-  diagnosticContext.contextLength = context.length;
+  diagnosticContext.packedDocumentCount = packed.includedCount;
+  diagnosticContext.contextLength = packed.context.length;
+  diagnosticContext.estimatedInputTokens = packed.estimatedInputTokens;
+  diagnosticContext.truncatedContent = packed.truncatedContent;
 
   logChatDiag('after_context_build', diagnosticContext);
-
-
-
   logChatDiag('before_groq', {
-
     ...diagnosticContext,
-
     model: env.GROQ_MODEL,
-
   });
 
+  await consumeAiQuota(userId);
 
+  let answer: string;
 
-  const answer = await generateAnswerFromContext(context, trimmedMessage);
+  try {
+    answer = await generateAnswerFromContext(packed.context, trimmedMessage);
+  } catch (error) {
+    await releaseAiQuota(userId).catch((releaseError) => {
+      logger.error(
+        { ...safeErrorLogFields(releaseError), userId },
+        'Failed to release AI quota after Groq error',
+      );
+    });
+    throw error;
+  }
 
-
+  const packedById = new Map(packed.documents.map((doc) => [doc.id, doc]));
+  const sources = selectSupportingCitations(
+    answer,
+    searchResults
+      .filter((result) => packedById.has(result.document.id))
+      .map((result) => ({
+        documentId: result.document.id,
+        title: result.document.title,
+        sourceType: result.document.sourceType,
+        score: result.score,
+        content: packedById.get(result.document.id)?.content ?? extractTextContent(result.document.content),
+      })),
+  );
 
   return {
-
     answer,
-
-    sources: searchResults.map(toCitationSource),
-
+    sources,
   };
-
 }
-
-

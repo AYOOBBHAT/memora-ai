@@ -18,6 +18,8 @@ import {
   UploadPdfInput,
 } from '@/validators/document.validator';
 import { extractYouTubeTranscript } from '@/services/youtube.service';
+import { assertPdfWithinLaunchLimits } from '@/services/pdfLimits';
+import { consumeUploadQuota, releaseUploadQuota } from '@/services/quota.service';
 
 export function toSafeDocument(doc: IDocumentDocument): SafeDocument {
   return {
@@ -163,24 +165,35 @@ export async function createDocumentFromPdf(
     );
   }
 
+  assertPdfWithinLaunchLimits(extractionResult.pageCount, extractionResult.text);
+
   if (fields.collectionId) {
     await verifyUserCollections(userId, [fields.collectionId]);
   }
 
-  const document = await DocumentModel.create({
-    userId,
-    title,
-    content: extractionResult.text,
-    sourceType: 'pdf',
-    metadata: {
-      fileName,
-      mimeType: file.mimetype,
-      fileSize: file.size,
-      pageCount: extractionResult.pageCount,
-      uploadedAt: new Date().toISOString(),
-    },
-    ...(fields.collectionId ? { collectionId: fields.collectionId } : {}),
-  });
+  await consumeUploadQuota(userId);
+
+  let document: IDocumentDocument;
+
+  try {
+    document = await DocumentModel.create({
+      userId,
+      title,
+      content: extractionResult.text,
+      sourceType: 'pdf',
+      metadata: {
+        fileName,
+        mimeType: file.mimetype,
+        fileSize: file.size,
+        pageCount: extractionResult.pageCount,
+        uploadedAt: new Date().toISOString(),
+      },
+      ...(fields.collectionId ? { collectionId: fields.collectionId } : {}),
+    });
+  } catch (error) {
+    await releaseUploadQuota(userId).catch(() => undefined);
+    throw error;
+  }
 
   scheduleDocumentEmbedding(document._id.toString(), userId);
 

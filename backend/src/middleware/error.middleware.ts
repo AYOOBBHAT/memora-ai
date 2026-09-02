@@ -3,6 +3,7 @@ import { ApiError } from '@/utils/ApiError';
 import { HTTP_STATUS } from '@/constants/httpStatus';
 import { env } from '@/config/env';
 import pino from 'pino';
+import { safeErrorLogFields } from '@/utils/safeLog';
 
 const logger = pino({ name: 'error-handler' });
 
@@ -21,7 +22,7 @@ export const errorHandler = (
     return;
   }
 
-  logger.error({ err }, 'Unhandled error');
+  logger.error(safeErrorLogFields(err), 'Unhandled error');
 
   res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
     success: false,

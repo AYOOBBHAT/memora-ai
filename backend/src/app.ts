@@ -12,26 +12,9 @@ import routes from '@/routes';
 import swaggerRoutes from '@/routes/swagger.routes';
 import { notFoundHandler } from '@/middleware/notFound.middleware';
 import { errorHandler } from '@/middleware/error.middleware';
+import { serializeRequestForLog } from '@/utils/safeLog';
 
 const logger = pino({ name: 'http' });
-
-const SENSITIVE_BODY_KEYS = new Set([
-  'password',
-  'otp',
-  'resetToken',
-  'refreshToken',
-  'idToken',
-]);
-
-function redactSensitiveBody(body: Record<string, unknown>): Record<string, unknown> {
-  const redacted: Record<string, unknown> = {};
-
-  for (const [key, value] of Object.entries(body)) {
-    redacted[key] = SENSITIVE_BODY_KEYS.has(key) ? '[REDACTED]' : value;
-  }
-
-  return redacted;
-}
 
 export function createApp(): Application {
   const app = express();
@@ -49,17 +32,7 @@ export function createApp(): Application {
       autoLogging: env.NODE_ENV !== 'test',
       serializers: {
         req(req) {
-          const sanitizedBody =
-            req.raw.body && typeof req.raw.body === 'object'
-              ? redactSensitiveBody(req.raw.body as Record<string, unknown>)
-              : undefined;
-
-          return {
-            id: req.id,
-            method: req.method,
-            url: req.url,
-            ...(sanitizedBody ? { body: sanitizedBody } : {}),
-          };
+          return serializeRequestForLog(req);
         },
       },
     }),

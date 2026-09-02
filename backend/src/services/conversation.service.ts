@@ -10,6 +10,7 @@ import {
 } from '@/models/Conversation.model';
 import { getCollectionById, verifyUserCollections } from '@/services/collection.service';
 import { generateRagAnswer } from '@/services/chat.service';
+import { selectTurnsForRetrieval, type RetrievalTurn } from '@/services/retrievalQueryRewrite';
 import { escapeRegex } from '@/services/search.service';
 import { HTTP_STATUS } from '@/constants/httpStatus';
 import type {
@@ -70,6 +71,30 @@ async function getOwnedConversation(
   }
 
   return conversation;
+}
+
+const RECENT_TURN_FETCH_LIMIT = 8;
+
+/**
+ * Loads a small window of prior turns from an owned conversation.
+ * Always filtered by both conversationId and userId.
+ */
+export async function getRecentTurnsForRetrieval(
+  userId: string,
+  conversationId: string,
+): Promise<RetrievalTurn[]> {
+  const messages = await ChatMessageModel.find({ conversationId, userId })
+    .sort({ timestamp: -1, _id: -1 })
+    .limit(RECENT_TURN_FETCH_LIMIT)
+    .select({ role: 1, content: 1 })
+    .lean();
+
+  return selectTurnsForRetrieval(
+    messages.map((message) => ({
+      role: message.role,
+      content: typeof message.content === 'string' ? message.content : '',
+    })),
+  );
 }
 
 async function enrichConversationListItems(
@@ -219,9 +244,11 @@ export async function sendChatWithPersistence(
   }
 
   let conversation: IConversationDocument;
+  let priorTurns: RetrievalTurn[] = [];
 
   if (conversationId) {
     conversation = await getOwnedConversation(userId, conversationId);
+    priorTurns = await getRecentTurnsForRetrieval(userId, conversation._id.toString());
 
     if (requestedCollectionIds?.length) {
       conversation.collectionIds = requestedCollectionIds.map((id) => new Types.ObjectId(id));
@@ -250,7 +277,7 @@ export async function sendChatWithPersistence(
     timestamp: now,
   });
 
-  const ragResult = await generateRagAnswer(userId, message, effectiveCollectionIds);
+  const ragResult = await generateRagAnswer(userId, message, effectiveCollectionIds, priorTurns);
 
   const assistantMessage = await ChatMessageModel.create({
     conversationId: conversation._id,

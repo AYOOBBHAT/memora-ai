@@ -5,6 +5,7 @@ import { HTTP_STATUS } from '@/constants/httpStatus';
 import { DocumentModel, IDocumentDocument } from '@/models/Document.model';
 import { verifyUserCollections } from '@/services/collection.service';
 import { toSafeDocument } from '@/services/document.service';
+import { deriveRetrievalQueries, mergeScoredHits } from '@/services/untrustedContent';
 import { TaskType } from '@google/generative-ai';
 import { generateEmbedding } from '@/services/embedding.service';
 import { ScoredSearchResult } from '@/types';
@@ -124,4 +125,31 @@ export async function searchDocumentsBySemanticQuery(
 
     throw new ApiError(HTTP_STATUS.INTERNAL_SERVER_ERROR, 'Semantic document search failed');
   }
+}
+
+/**
+ * RAG retrieval: same $vectorSearch as document search, plus extra queries only
+ * when the user question wraps an information need in a command.
+ * User isolation, index, numCandidates, and top-k are unchanged.
+ */
+export async function searchDocumentsForChat(
+  userId: string,
+  query: string,
+  limit: number = DEFAULT_SEARCH_LIMIT,
+  collectionIds?: string[],
+): Promise<ScoredSearchResult[]> {
+  const queries = deriveRetrievalQueries(query);
+  const cappedLimit = Math.min(Math.max(1, limit), DEFAULT_SEARCH_LIMIT);
+
+  if (queries.length <= 1) {
+    return searchDocumentsBySemanticQuery(userId, query, cappedLimit, collectionIds);
+  }
+
+  const groups = await Promise.all(
+    queries.map((retrievalQuery) =>
+      searchDocumentsBySemanticQuery(userId, retrievalQuery, cappedLimit, collectionIds),
+    ),
+  );
+
+  return mergeScoredHits(groups, cappedLimit);
 }

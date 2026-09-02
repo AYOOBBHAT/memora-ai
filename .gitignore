@@ -29,3 +29,4 @@ Thumbs.db
 
 # AI evaluation live-run artifact (model outputs)
 backend/src/ai-evaluation/last-report.json
+backend/src/ai-evaluation/pdf-cost-audit-results.json
