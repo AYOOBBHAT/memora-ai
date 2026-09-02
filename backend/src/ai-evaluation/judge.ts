@@ -86,18 +86,30 @@ export const PRODUCTION_NO_DOCUMENTS_ANSWER =
   'Try adding documents with related content or rephrasing your question.';
 
 export function compactText(value: string): string {
-  return value.toLowerCase().replace(/\s+/g, ' ').trim();
+  return value
+    .normalize('NFKC')
+    .replace(/[\u200B-\u200D\uFEFF\u00AD]/g, '')
+    .replace(/[\u2010-\u2015\u2212\u2043\uFE58\uFE63\uFF0D]/g, '-')
+    .replace(/[*_`]+/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 export function flexIncludes(haystack: string, needle: string): boolean {
   const h = compactText(haystack);
   const n = compactText(needle);
+  if (!n) {
+    return false;
+  }
 
   if (h.includes(n)) {
     return true;
   }
 
-  return h.replace(/ /g, '').includes(n.replace(/ /g, ''));
+  const hFlat = h.replace(/[\s-]+/g, '');
+  const nFlat = n.replace(/[\s-]+/g, '');
+  return nFlat.length > 0 && hFlat.includes(nFlat);
 }
 
 export function isRefusal(answer: string): boolean {
