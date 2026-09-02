@@ -119,6 +119,39 @@ function answerNumberSet(answerTokens: string[]): Set<string> {
 }
 
 /**
+ * Body text used as evidence. The document title is metadata: naming a source
+ * (including as an exclusion or contrast) is not a factual claim from that source.
+ * A leading heading that repeats the title is stripped so it is not treated as a fact.
+ */
+function factualEvidenceText(title: string, content: string): string {
+  const compactTitle = compactCitationText(title);
+  let compact = compactCitationText(content);
+  if (compactTitle) {
+    while (compact === compactTitle || compact.startsWith(`${compactTitle} `)) {
+      compact = compact.slice(compactTitle.length).trim();
+    }
+  }
+  return compact;
+}
+
+/** True when the n-gram only names this document rather than stating a body fact. */
+function phraseNamesDocument(phrase: string, title: string): boolean {
+  const titleTokens = tokenize(title);
+  const phraseTokens = tokenize(phrase);
+  if (
+    phraseTokens.length === 0 ||
+    titleTokens.length === 0 ||
+    phraseTokens.length > titleTokens.length
+  ) {
+    return false;
+  }
+
+  const titleHay = ` ${titleTokens.join(' ')} `;
+  const phraseHay = ` ${phraseTokens.join(' ')} `;
+  return titleHay.includes(phraseHay);
+}
+
+/**
  * A phrase in the document supports the answer unless it sits next to a number
  * that the answer did not state (e.g. "Free plan provides 9999" vs an answer of 50).
  */
@@ -190,7 +223,11 @@ export function documentSupportsAnswer(answer: string, title: string, content: s
     return false;
   }
 
-  const haystack = `${title}\n${content}`;
+  const haystack = factualEvidenceText(title, content);
+  if (!haystack) {
+    return false;
+  }
+
   const answerTokens = tokenize(trimmedAnswer);
   const documentTokens = tokenize(haystack);
   const answerNumbers = answerNumberSet(answerTokens);
@@ -201,7 +238,10 @@ export function documentSupportsAnswer(answer: string, title: string, content: s
 
   const answerContent = contentTokens(trimmedAnswer);
   const grams = answerContent.length < 3 ? ngrams(answerContent, 2) : ngrams(answerContent, 3);
-  return grams.some((gram) => phraseSupportsAnswerClaim(haystack, gram, answerNumbers));
+  return grams.some(
+    (gram) =>
+      !phraseNamesDocument(gram, title) && phraseSupportsAnswerClaim(haystack, gram, answerNumbers),
+  );
 }
 
 /**
