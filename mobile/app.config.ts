@@ -1,7 +1,8 @@
 import { ExpoConfig, ConfigContext } from 'expo/config';
 
 const APP_LOGO = './assets/new_memora_app_logo.png';
-const SPLASH_BACKGROUND = '#013E37';
+const LAUNCH_BACKGROUND = '#000000';
+const ICON_BACKGROUND = '#013E37';
 
 const GOOGLE_CLIENT_ID_SUFFIX = '.apps.googleusercontent.com';
 
@@ -52,8 +53,9 @@ function buildPlugins(googleIosUrlScheme: string | null): ExpoConfig['plugins'] 
     [
       'expo-splash-screen',
       {
-        backgroundColor: '#0F172A',
-        image: APP_LOGO,
+        backgroundColor: LAUNCH_BACKGROUND,
+        image: './assets/launch-empty.png',
+        imageWidth: 1,
         resizeMode: 'contain',
       },
     ],
@@ -117,7 +119,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       softwareKeyboardLayoutMode: 'resize',
 
       adaptiveIcon: {
-        backgroundColor: SPLASH_BACKGROUND,
+        backgroundColor: ICON_BACKGROUND,
 
         foregroundImage: APP_LOGO,
       },

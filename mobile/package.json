@@ -24,6 +24,7 @@
     "expo-share-intent": "^7.0.0",
     "expo-splash-screen": "~56.0.10",
     "expo-status-bar": "~56.0.4",
+    "expo-system-ui": "~56.0.5",
     "react": "19.2.3",
     "react-native": "0.85.3",
     "react-native-keyboard-controller": "1.21.6",

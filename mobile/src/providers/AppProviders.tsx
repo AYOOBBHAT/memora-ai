@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
 import { NavigationContainer, DarkTheme, DefaultTheme } from '@react-navigation/native';
 
 import { linking } from '../navigation/linking';
@@ -28,14 +28,24 @@ function AuthGate({ children }: { children: ReactNode }) {
 }
 
 function NavigationShell({ children }: { children: ReactNode }) {
-  const { isDark } = useTheme();
+  const { isDark, theme } = useTheme();
+  const navigationTheme = useMemo(() => {
+    const base = isDark ? DarkTheme : DefaultTheme;
+    return {
+      ...base,
+      colors: {
+        ...base.colors,
+        background: theme.colors.background,
+      },
+    };
+  }, [isDark, theme.colors.background]);
 
   return (
     <SafeAreaProvider>
       <NavigationContainer
         ref={navigationRef}
         linking={linking}
-        theme={isDark ? DarkTheme : DefaultTheme}
+        theme={navigationTheme}
       >
         <StatusBar style={isDark ? 'light' : 'dark'} />
         {children}

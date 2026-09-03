@@ -46,16 +46,13 @@ interface ThemeProviderProps {
 export function ThemeProvider({ children }: ThemeProviderProps) {
   const systemScheme = useColorScheme();
   const [preference, setPreferenceState] = useState<ThemePreference>('system');
-  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    AsyncStorage.getItem(THEME_PREFERENCE_KEY)
-      .then((stored) => {
-        if (stored === 'light' || stored === 'dark' || stored === 'system') {
-          setPreferenceState(stored);
-        }
-      })
-      .finally(() => setIsReady(true));
+    void AsyncStorage.getItem(THEME_PREFERENCE_KEY).then((stored) => {
+      if (stored === 'light' || stored === 'dark' || stored === 'system') {
+        setPreferenceState(stored);
+      }
+    });
   }, []);
 
   const setPreference = useCallback((next: ThemePreference) => {
@@ -77,10 +74,6 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     }),
     [theme, preference, setPreference],
   );
-
-  if (!isReady) {
-    return null;
-  }
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
