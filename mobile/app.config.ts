@@ -93,7 +93,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 
     slug: 'memora-mobile',
 
-    version: '1.0.0',
+    version: '1.0.1',
 
     orientation: 'portrait',
 
@@ -108,13 +108,13 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 
       bundleIdentifier: 'com.memora.mobile',
 
-      buildNumber: '1',
+      buildNumber: '2',
     },
 
     android: {
       package: 'com.memora.mobile',
 
-      versionCode: 1,
+      versionCode: 2,
 
       softwareKeyboardLayoutMode: 'resize',
 
